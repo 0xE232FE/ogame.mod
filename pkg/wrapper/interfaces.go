@@ -2,6 +2,7 @@ package wrapper
 
 import (
 	"crypto/tls"
+	"github.com/alaingilbert/ogame/pkg/device"
 	"net/http"
 	"net/url"
 	"time"
@@ -183,6 +184,7 @@ type Wrapper interface {
 	GetCachedPlayer() ogame.UserInfos
 	GetCachedPreferences() ogame.Preferences
 	GetClient() *httpclient.Client
+	GetDevice() *device.Device
 	GetExtractor() extractor.Extractor
 	GetLanguage() string
 	GetNbSystems() int64
