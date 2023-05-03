@@ -1,11 +1,13 @@
 package device
 
 import (
+	cr "crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -236,7 +238,7 @@ func (d *Builder) Build() (*Device, error) {
 	}
 	if d.navigatorVendor == "" {
 		d.setRandomNavigatorVendor()
-		if d.navigatorVendor == "" && d.browserName != Firefox {
+		if d.navigatorVendor == "" {
 			return nil, errors.New("navigatorVendor must be specified")
 		}
 	}
@@ -301,7 +303,7 @@ type JsFingerprint struct {
 	DateIso               string
 	Game1DateHeader       string
 	CalcDeltaMs           int64
-	NavigatorDoNotTrack   string
+	NavigatorDoNotTrack   bool
 	LocalStorageEnabled   bool
 	SessionStorageEnabled bool
 	VideoHash             string
@@ -346,7 +348,7 @@ func (d *Device) GetBlackbox() (string, error) {
 		DateIso:               time.Now().UTC().Format(javascriptISOString),
 		Game1DateHeader:       game1DateHeader,
 		CalcDeltaMs:           elapsed,
-		NavigatorDoNotTrack:   "1",
+		NavigatorDoNotTrack:   false,
 		LocalStorageEnabled:   true,
 		SessionStorageEnabled: true,
 		VideoHash:             randFakeHash(),
@@ -358,6 +360,8 @@ func (d *Device) GetBlackbox() (string, error) {
 		PermissionsStatesHash: randFakeHash(),
 		WebglRenderHash:       randFakeHash(),
 	}
+
+	//tmpDateIso := fprt.DateIso
 
 	deviceStorageDir := filepath.Join(DefaultStoragePath(), d.name)
 	if err := os.MkdirAll(deviceStorageDir, 0755); err != nil {
@@ -377,11 +381,10 @@ func (d *Device) GetBlackbox() (string, error) {
 		}
 	}
 
-	// fprt.DateIso = time.Now().UTC().Format(javascriptISOString)
+	//fprt.DateIso = tmpDateIso
 	fprt.Game1DateHeader = game1DateHeader
 	fprt.CalcDeltaMs = elapsed
 
-	//by, err := json.MarshalIndent(fprt, "", " ")
 	by, err := json.Marshal(fprt)
 	if err != nil {
 		return "", err
@@ -435,6 +438,11 @@ func (f *JsFingerprint) MarshalJSON() ([]byte, error) {
 }
 
 func randChar() rune {
+	// c := rune(int64(32+rand.Float64()*94) | 0)
+	// for c == rune(' ') {
+	// 	c = rune(int64(32+rand.Float64()*94) | 0)
+	// }
+	// return c
 	return rune(int64(32+rand.Float64()*94) | 0)
 }
 
@@ -459,9 +467,8 @@ func GenNewXVec() string {
 
 func rotateXVec(xvec string) string {
 	nowTs := time.Now().UnixMilli()
-	parts := strings.Split(xvec, " ")
-	part1 := parts[0]
-	prevTs := utils.DoParseI64(parts[1])
+	part1 := xvec[:100]
+	prevTs := utils.DoParseI64(xvec[101:])
 	if prevTs+1000 < nowTs {
 		part1 = part1[1:] + string(randChar())
 	}
@@ -489,7 +496,7 @@ func getGame1Js(client httpclient.IHttpClient) (dateHeader string, elapsed int64
 
 func randFakeHash() string {
 	buf := make([]byte, 32)
-	_, _ = rand.Read(buf)
+	_, _ = cr.Read(buf)
 	return hex.EncodeToString(buf)
 }
 
@@ -789,10 +796,6 @@ func (d *Builder) setRandomMemory() {
 	if d.osName == Android {
 		// 1, 2, 4, 8
 		d.memory = 8
-	} else {
-		d.memory = utils.RandChoice([]int{
-			4, 8, 16, 32, 64,
-		})
 	}
 }
 
@@ -919,7 +922,7 @@ var timezones = []string{"Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa",
 	"Pacific/Kosrae", "Pacific/Kwajalein", "Pacific/Majuro", "Pacific/Marquesas", "Pacific/Midway", "Pacific/Nauru",
 	"Pacific/Niue", "Pacific/Norfolk", "Pacific/Noumea", "Pacific/Pago_Pago", "Pacific/Palau", "Pacific/Pitcairn",
 	"Pacific/Ponape", "Pacific/Port_Moresby", "Pacific/Rarotonga", "Pacific/Saipan", "Pacific/Tahiti", "Pacific/Tarawa",
-	"Pacific/Tongatapu", "Pacific/Truk", "Pacific/Wake", "Pacific/Wallis", "UTC"}
+	"Pacific/Tongatapu", "Pacific/Truk", "Pacific/Wake", "Pacific/Wallis"}
 
 func EncryptBlackbox(raw string) string {
 	retardPseudoB64 := func(v []uint8) string {
@@ -1093,7 +1096,7 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 		return nil, errors.New("failed to parse CalcDeltaMs")
 	}
 	fingerprint.CalcDeltaMs = int64(calcDeltaMs)
-	fingerprint.NavigatorDoNotTrack, ok = arr[2].(string)
+	fingerprint.NavigatorDoNotTrack, ok = arr[2].(bool)
 	if !ok {
 		return nil, errors.New("failed to parse NavigatorDoNotTrack")
 	}
@@ -1138,4 +1141,20 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 		return nil, errors.New("failed to parse WebglRenderHash")
 	}
 	return fingerprint, nil
+}
+
+func GetVector() {
+	xVec := GenNewXVec()
+	time.Sleep(1 * time.Second)
+	newXVec := rotateXVec(xVec)
+	time.Sleep(1 * time.Second)
+	log.Println(xVec)
+	log.Println(newXVec)
+	time.Sleep(1 * time.Second)
+	newXVec = rotateXVec(newXVec)
+	log.Println(newXVec)
+}
+
+func (d *Device) GetName() string {
+	return d.name
 }

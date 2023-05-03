@@ -318,6 +318,12 @@ func (b *OGame) loginWithBearerToken(token string) (bool, error) {
 			if err != nil {
 				return true, err
 			}
+			log.Println(loginLink)
+			if loginLink == "" {
+				b.error("Login link empty")
+				atomic.StoreInt32(&b.isLoggedInAtom, 0) // At this point, we are not logged in
+				return true, errors.New("Login link empty")
+			}
 			pageHTML, err := execLoginLink(b, loginLink)
 			if err != nil {
 				return true, err
@@ -462,7 +468,6 @@ func postSessions(b *OGame, lobby, username, password, otpSecret string) (out *G
 					return err
 				}
 				tried = true
-
 				questionRaw, iconsRaw, err := StartCaptchaChallenge(client, b.ctx, captchaErr.ChallengeID)
 				if err != nil {
 					return errors.New("failed to start captcha challenge: " + err.Error())

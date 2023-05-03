@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -75,7 +76,7 @@ func Register(device *device.Device, ctx context.Context, lobby, email, password
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest(http.MethodPut, "https://"+lobby+".ogame.gameforge.com/api/users", strings.NewReader(string(jsonPayloadBytes)))
+	req, err := http.NewRequest(http.MethodPost, "https://"+lobby+".ogame.gameforge.com/api/users", strings.NewReader(string(jsonPayloadBytes)))
 	if err != nil {
 		return err
 	}
@@ -308,6 +309,11 @@ func GFLogin(dev *device.Device, ctx context.Context, lobby, username, password,
 	}
 
 	if resp.StatusCode == http.StatusForbidden {
+		log.Println("Forbidden")
+		err := os.Remove(device.DefaultStoragePath() + "/" + dev.GetName() + "/fingerprint")
+		if err != nil {
+			log.Println(err)
+		}
 		return out, errors.New(resp.Status + " : " + string(by))
 	}
 
@@ -659,7 +665,6 @@ func GetUserAccounts(client httpclient.IHttpClient, ctx context.Context, lobby, 
 }
 
 func GetLoginLink(dev *device.Device, ctx context.Context, lobby string, userAccount Account, bearerToken string) (string, error) {
-
 	ogURL := fmt.Sprintf("https://%s.ogame.gameforge.com/api/users/me/loginLink", lobby)
 	payload := struct {
 		Server struct {
@@ -675,7 +680,10 @@ func GetLoginLink(dev *device.Device, ctx context.Context, lobby string, userAcc
 	payload.ID = userAccount.ID
 	payload.ClickedButton = "account_list"
 	//payload.ClickedButton = "quick_join"
-	blackbox, _ := dev.GetBlackbox()
+	blackbox, err := dev.GetBlackbox()
+	if err != nil {
+		return "", err
+	}
 	payload.Blackbox = `tra:` + blackbox
 	//jsonPayloadBytes, err := json.MarshalIndent(&payload, "", " ")
 	jsonPayloadBytes, err := json.Marshal(&payload)
@@ -683,15 +691,13 @@ func GetLoginLink(dev *device.Device, ctx context.Context, lobby string, userAcc
 		return "", err
 	}
 
-	log.Println(string(jsonPayloadBytes))
-
 	req, err := http.NewRequest(http.MethodPost, ogURL, strings.NewReader(string(jsonPayloadBytes)))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Add("authorization", "Bearer "+bearerToken)
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Add("Accept-Encoding", "gzip")
 
 	resp, err := dev.GetClient().Do(req.WithContext(ctx))
 	if err != nil {
@@ -702,11 +708,23 @@ func GetLoginLink(dev *device.Device, ctx context.Context, lobby string, userAcc
 	if err != nil {
 		return "", err
 	}
+	if resp.StatusCode == http.StatusBadRequest {
+		return "", err
+	}
+	if string(by) == "[]" {
+		log.Println(resp.Request.Response.Status)
+		os.Remove(device.DefaultStoragePath() + "/" + dev.GetName() + "/fingerprint")
+	}
+	if resp != nil {
+		log.Println(resp.Status)
+		log.Println(string(by))
+	}
 	var loginLink struct {
 		URL string
 	}
 	if err := json.Unmarshal(by, &loginLink); err != nil {
 		return "", errors.New("failed to get login link : " + err.Error() + " : " + string(by))
 	}
+
 	return loginLink.URL, nil
 }
