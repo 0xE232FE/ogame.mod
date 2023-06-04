@@ -20,8 +20,8 @@ require (
 	github.com/jinzhu/now v1.1.5
 	github.com/jpillora/chisel v1.8.1
 	github.com/labstack/echo v3.3.10+incompatible
-	github.com/labstack/echo/v4 v4.9.0
-	github.com/labstack/gommon v0.3.1
+	github.com/labstack/echo/v4 v4.10.2
+	github.com/labstack/gommon v0.4.0
 	github.com/magiconair/properties v1.8.1
 	github.com/martinlindhe/base36 v1.1.1
 	github.com/mattn/anko v0.1.9
@@ -31,11 +31,11 @@ require (
 	github.com/orirawlings/persistent-cookiejar v0.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/pquerna/otp v1.2.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	github.com/yuin/gopher-lua v0.0.0-20191220021717-ab39c6098bdb
-	golang.org/x/net v0.0.0-20220812174116-3211cb980234
-	golang.org/x/text v0.3.7
-	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
+	golang.org/x/net v0.7.0
+	golang.org/x/text v0.7.0
+	golang.org/x/time v0.3.0
 	gopkg.in/abiosoft/ishell.v2 v2.0.0
 	gopkg.in/tucnak/telebot.v2 v2.5.0
 	gopkg.in/urfave/cli.v2 v2.0.0-20180128182452-d3ae77c26ac8
@@ -59,18 +59,20 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/jpillora/sizestr v1.0.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230126093431-47fa9a501578 // indirect
+	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasttemplate v1.2.1 // indirect
+	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go4.org v0.0.0-20200411211856-f5505b9728dd // indirect
-	golang.org/x/crypto v0.0.0-20220817201139-bc19a97f63c8 // indirect
+	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.4.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 	gopkg.in/retry.v1 v1.0.3 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	modernc.org/libc v1.22.2 // indirect

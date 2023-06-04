@@ -1,13 +1,11 @@
 package device
 
 import (
-	cr "crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -238,7 +236,7 @@ func (d *Builder) Build() (*Device, error) {
 	}
 	if d.navigatorVendor == "" {
 		d.setRandomNavigatorVendor()
-		if d.navigatorVendor == "" {
+		if d.navigatorVendor == "" && d.browserName != Firefox {
 			return nil, errors.New("navigatorVendor must be specified")
 		}
 	}
@@ -361,8 +359,6 @@ func (d *Device) GetBlackbox() (string, error) {
 		WebglRenderHash:       randFakeHash(),
 	}
 
-	//tmpDateIso := fprt.DateIso
-
 	deviceStorageDir := filepath.Join(DefaultStoragePath(), d.name)
 	if err := os.MkdirAll(deviceStorageDir, 0755); err != nil {
 		return "", err
@@ -381,7 +377,6 @@ func (d *Device) GetBlackbox() (string, error) {
 		}
 	}
 
-	//fprt.DateIso = tmpDateIso
 	fprt.Game1DateHeader = game1DateHeader
 	fprt.CalcDeltaMs = elapsed
 
@@ -438,11 +433,6 @@ func (f *JsFingerprint) MarshalJSON() ([]byte, error) {
 }
 
 func randChar() rune {
-	// c := rune(int64(32+rand.Float64()*94) | 0)
-	// for c == rune(' ') {
-	// 	c = rune(int64(32+rand.Float64()*94) | 0)
-	// }
-	// return c
 	return rune(int64(32+rand.Float64()*94) | 0)
 }
 
@@ -496,7 +486,7 @@ func getGame1Js(client httpclient.IHttpClient) (dateHeader string, elapsed int64
 
 func randFakeHash() string {
 	buf := make([]byte, 32)
-	_, _ = cr.Read(buf)
+	_, _ = rand.Read(buf)
 	return hex.EncodeToString(buf)
 }
 
@@ -643,7 +633,7 @@ func (d *Builder) setRandomNavigatorVendor() {
 }
 
 func (d *Builder) setRandomWebglInfo() {
-	if d.osName == Windows {
+	if d.osName == Windows || d.osName == Linux {
 		if d.browserName == Chrome {
 			d.webglInfo = utils.RandChoice([]string{
 				"Google Inc. (NVIDIA),ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
@@ -816,6 +806,10 @@ func (d *Builder) setRandomOsVersion() {
 		d.osVersion = utils.RandChoice([]string{
 			"7", "8", "10",
 		})
+	} else if d.osName == Linux {
+		d.osVersion = utils.RandChoice([]string{
+			"22.04", "20.04", "18.04",
+		})
 	}
 }
 
@@ -925,64 +919,78 @@ var timezones = []string{"Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa",
 	"Pacific/Tongatapu", "Pacific/Truk", "Pacific/Wake", "Pacific/Wallis"}
 
 func EncryptBlackbox(raw string) string {
-	retardPseudoB64 := func(v []uint8) string {
-		extraPadding := 0
-		for len(v)%3 != 0 {
-			extraPadding++
-			v = append(v, 0)
-		}
-		chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
-		sb := make([]uint8, 0)
-		const mask = 0b11_1111
-		for i := 0; i < len(v); i += 3 {
-			first := uint32(v[i+0])
-			second := uint32(v[i+1])
-			third := uint32(v[i+2])
-			packed := first<<16 | second<<8 | third<<0
-			sb = append(sb, chars[(packed>>18)&mask], chars[(packed>>12)&mask], chars[(packed>>6)&mask], chars[(packed>>0)&mask])
-		}
-		return string(sb[:len(sb)-extraPadding])
-	}
 	escaped := url.QueryEscape(raw)
-	sb := make([]uint8, len(escaped))
-	sb[0] = escaped[0]
+	sb := strings.Builder{}
+	sb.Grow(len(escaped))
+
+	sb.WriteByte(escaped[0])
 	for i := 1; i < len(escaped); i++ {
-		sb[i] = sb[i-1] + escaped[i]
+		sb.WriteByte(sb.String()[i-1] + escaped[i])
 	}
-	return retardPseudoB64(sb)
+
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
+	const mask = 0b11_1111
+	extraPadding := 0
+	result := sb.String()
+	resultLength := len(result)
+
+	for resultLength%3 != 0 {
+		extraPadding++
+		result += "\x00"
+		resultLength++
+	}
+
+	output := make([]byte, 0, len(result)/3*4-extraPadding)
+
+	for i := 0; i < resultLength; i += 3 {
+		first := uint32(result[i])
+		second := uint32(result[i+1])
+		third := uint32(result[i+2])
+		packed := first<<16 | second<<8 | third<<0
+		output = append(output, chars[(packed>>18)&mask], chars[(packed>>12)&mask], chars[(packed>>6)&mask], chars[(packed>>0)&mask])
+	}
+
+	return string(output)
 }
 
 func DecryptBlackbox(encrypted string) (string, error) {
-	reverseRetardPseudoB64 := func(v string) []uint8 {
-		extraPadding := 0
-		for len(v)%4 != 0 {
-			v += "A"
-			extraPadding++
-		}
-		chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
-		sb := make([]uint8, 0)
-		const mask = 0b1111_1111
-		for i := 0; i < len(v); i += 4 {
-			first := strings.IndexByte(chars, v[i+0])
-			second := strings.IndexByte(chars, v[i+1])
-			third := strings.IndexByte(chars, v[i+2])
-			fourth := strings.IndexByte(chars, v[i+3])
-			packed := first<<18 | second<<12 | third<<6 | fourth<<0
-			sb = append(sb, uint8(packed>>16&mask), uint8(packed>>8&mask), uint8(packed>>0&mask))
-		}
-		return sb[0 : len(sb)-extraPadding]
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
+	const mask = 0b1111_1111
+
+	lookup := make(map[byte]int)
+	for i, c := range chars {
+		lookup[byte(c)] = i
 	}
-	encrypted1 := reverseRetardPseudoB64(encrypted)
-	sb := make([]uint8, len(encrypted1))
-	for i := len(encrypted1) - 2; i >= 0; i-- {
-		sb[i+1] = encrypted1[i+1] - encrypted1[i]
-	}
-	sb[0] = encrypted1[0]
-	out, err := url.QueryUnescape(string(sb))
+
+	decoded, err := base64.URLEncoding.DecodeString(encrypted)
 	if err != nil {
 		return "", err
 	}
-	return out, nil
+
+	sb := make([]byte, len(decoded)/4*3)
+	extraPadding := len(decoded) % 4
+
+	for i := 0; i < len(decoded)-extraPadding; i += 4 {
+		first := lookup[decoded[i+0]]
+		second := lookup[decoded[i+1]]
+		third := lookup[decoded[i+2]]
+		fourth := lookup[decoded[i+3]]
+		packed := uint32(first<<18 | second<<12 | third<<6 | fourth<<0)
+		sb[i/4*3+0] = byte(packed >> 16 & mask)
+		sb[i/4*3+1] = byte(packed >> 8 & mask)
+		sb[i/4*3+2] = byte(packed >> 0 & mask)
+	}
+
+	for i := len(decoded) - 2; i >= 0; i-- {
+		sb[i+1] -= sb[i]
+	}
+
+	decodedString, err := url.QueryUnescape(string(sb))
+	if err != nil {
+		return "", err
+	}
+
+	return decodedString, nil
 }
 
 func ParseEncryptedBlackbox(encrypted string) (fingerprint *JsFingerprint, err error) {
@@ -1141,18 +1149,6 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 		return nil, errors.New("failed to parse WebglRenderHash")
 	}
 	return fingerprint, nil
-}
-
-func GetVector() {
-	xVec := GenNewXVec()
-	time.Sleep(1 * time.Second)
-	newXVec := rotateXVec(xVec)
-	time.Sleep(1 * time.Second)
-	log.Println(xVec)
-	log.Println(newXVec)
-	time.Sleep(1 * time.Second)
-	newXVec = rotateXVec(newXVec)
-	log.Println(newXVec)
 }
 
 func (d *Device) GetName() string {

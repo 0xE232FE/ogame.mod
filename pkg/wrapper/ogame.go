@@ -988,7 +988,12 @@ func (b *OGame) connectChatV8(chatRetry *exponentialBackoff.ExponentialBackoff, 
 		b.error("failed to create request:", err)
 		return
 	}
-	client := &http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{
+		Transport: tr,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		b.error("failed to get socket.io token:", err)
@@ -1006,7 +1011,10 @@ func (b *OGame) connectChatV8(chatRetry *exponentialBackoff.ExponentialBackoff, 
 
 	origin := "https://" + host + ":" + port + "/"
 	wssURL := "wss://" + host + ":" + port + "/socket.io/?EIO=4&transport=websocket&sid=" + sid
-	b.ws, err = websocket.Dial(wssURL, "", origin)
+	//b.ws, err = websocket.Dial(wssURL, "", origin)
+	wsConfig, _ := websocket.NewConfig(wssURL, origin)
+	wsConfig.TlsConfig = &tls.Config{InsecureSkipVerify: true}
+	b.ws, err = websocket.DialConfig(wsConfig)
 	if err != nil {
 		b.error("failed to dial websocket:", err)
 		return
@@ -3103,7 +3111,7 @@ func (b *OGame) IsV8() bool {
 
 // IsV9 ...
 func (b *OGame) IsV9() bool {
-	return len(b.ServerVersion()) > 0 && b.ServerVersion()[0] == '9'
+	return len(b.ServerVersion()) > 0 && b.ServerVersion()[0] == '9' || len(b.ServerVersion()) > 1 && b.ServerVersion()[:2] == "10"
 }
 
 func (b *OGame) technologyDetails(celestialID ogame.CelestialID, id ogame.ID) (ogame.TechnologyDetails, error) {
