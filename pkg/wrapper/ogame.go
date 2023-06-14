@@ -318,7 +318,7 @@ func (b *OGame) loginWithBearerToken(token string) (bool, error) {
 			if err != nil {
 				return true, err
 			}
-			log.Println(loginLink)
+			//log.Println(loginLink)
 			if loginLink == "" {
 				b.error("Login link empty")
 				atomic.StoreInt32(&b.isLoggedInAtom, 0) // At this point, we are not logged in

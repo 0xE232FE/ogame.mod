@@ -712,12 +712,12 @@ func GetLoginLink(dev *device.Device, ctx context.Context, lobby string, userAcc
 		return "", err
 	}
 	if string(by) == "[]" {
-		log.Println(resp.Request.Response.Status)
+		//log.Println(resp.Request.Response.Status)
 		os.Remove(device.DefaultStoragePath() + "/" + dev.GetName() + "/fingerprint")
 	}
 	if resp != nil {
-		log.Println(resp.Status)
-		log.Println(string(by))
+		//log.Println(resp.Status)
+		//log.Println(string(by))
 	}
 	var loginLink struct {
 		URL string
