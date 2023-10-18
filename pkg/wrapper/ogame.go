@@ -288,18 +288,12 @@ func execLoginLink(b *OGame, loginLink string) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	pageHTML, err := utils.ReadBody(resp)
-	if err != nil {
-		return nil, err
-	}
-	pageHTML, err = b.introBypass(pageHTML)
-	return pageHTML, err
+	return utils.ReadBody(resp)
 }
 
 // V11 IntroBypass
-func (b *OGame) introBypass(pageHTML []byte) ([]byte, error) {
-	var err error
-	if bytes.Contains(pageHTML, []byte(`currentPage = "intro";`)) {
+func (b *OGame) introBypass(page parser.OverviewPage) error {
+	if bytes.Contains(page.GetContent(), []byte(`currentPage = "intro";`)) {
 		b.debug("bypassing intro page")
 		vals := url.Values{
 			"page":      {"ingame"},
@@ -310,16 +304,13 @@ func (b *OGame) introBypass(pageHTML []byte) ([]byte, error) {
 			"username":  {b.Player.PlayerName},
 			"isVeteran": {"1"},
 		}
-		_, err = b.postPageContent(vals, payload)
+		_, err := b.postPageContent(vals, payload)
+
 		if err != nil {
-			return nil, err
-		}
-		pageHTML, err = b.getPage(OverviewPageName)
-		if err != nil {
-			return nil, err
+			return err
 		}
 	}
-	return pageHTML, nil
+	return nil
 }
 
 // Return either or not the bot logged in using the provided bearer token.
@@ -763,7 +754,7 @@ func (b *OGame) loginPart3(userAccount Account, page parser.OverviewPage) error 
 	}
 
 	// V11 Intro bypass
-	if _, err := b.introBypass(page.GetContent()); err != nil {
+	if err := b.introBypass(page); err != nil {
 		b.error("failed to bypass intro:", err)
 	}
 
