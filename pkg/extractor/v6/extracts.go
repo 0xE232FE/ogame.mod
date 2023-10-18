@@ -1001,6 +1001,9 @@ func extractPreferencesFromDoc(doc *goquery.Document) ogame.Preferences {
 		PreserveSystemOnPlanetChange:       extractPreserveSystemOnPlanetChangeFromDoc(doc),
 		DiscoveryWarningEnabled:            extractDiscoveryWarningEnabledFromDoc(doc),
 		UrlaubsModus:                       extractUrlaubsModus(doc),
+		PlayerIntroductionIsVeteran:        extractPlayerIntroductionIsVeteran(doc),
+		PlayerIntroductionHideHighlights:   extractPlayerIntroductionHideHighlights(doc),
+		PlayerIntroductionHidePanel:        extractPlayerIntroductionHidePanel(doc),
 	}
 	if prefs.MobileVersion {
 		prefs.Notifications.BuildList = extractNotifBuildListFromDoc(doc)
@@ -1287,6 +1290,21 @@ func extractMobileVersionFromDoc(doc *goquery.Document) bool {
 
 func extractUrlaubsModus(doc *goquery.Document) bool {
 	_, exists := doc.Find("input[name=urlaubs_modus]").Attr("checked")
+	return exists
+}
+
+func extractPlayerIntroductionIsVeteran(doc *goquery.Document) bool {
+	_, exists := doc.Find("input[name=playerIntroductionIsVeteran]").Attr("checked")
+	return exists
+}
+
+func extractPlayerIntroductionHideHighlights(doc *goquery.Document) bool {
+	_, exists := doc.Find("input[name=playerIntroductionHideHighlights]").Attr("checked")
+	return exists
+}
+
+func extractPlayerIntroductionHidePanel(doc *goquery.Document) bool {
+	_, exists := doc.Find("input[name=playerIntroductionHidePanel]").Attr("checked")
 	return exists
 }
 

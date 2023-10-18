@@ -241,6 +241,9 @@ type Preferences struct {
 	PreserveSystemOnPlanetChange       bool
 	DiscoveryWarningEnabled            bool
 	UrlaubsModus                       bool // Vacation mode
+	PlayerIntroductionIsVeteran        bool
+	PlayerIntroductionHideHighlights   bool
+	PlayerIntroductionHidePanel        bool
 
 	// Mobile only
 	Notifications struct {

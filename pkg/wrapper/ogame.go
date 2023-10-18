@@ -34,6 +34,9 @@ import (
 	"github.com/alaingilbert/clockwork"
 	"github.com/alaingilbert/ogame/pkg/exponentialBackoff"
 	"github.com/alaingilbert/ogame/pkg/extractor"
+	v10 "github.com/alaingilbert/ogame/pkg/extractor/v10"
+	v104 "github.com/alaingilbert/ogame/pkg/extractor/v104"
+	v11 "github.com/alaingilbert/ogame/pkg/extractor/v11"
 	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
 	v7 "github.com/alaingilbert/ogame/pkg/extractor/v7"
 	v71 "github.com/alaingilbert/ogame/pkg/extractor/v71"
@@ -89,6 +92,7 @@ type OGame struct {
 	sessionChatCounter    int64
 	server                Server
 	serverData            ServerData
+	serverVersion         *version.Version
 	location              *time.Location
 	serverURL             string
 	logger                *log.Logger
@@ -284,7 +288,38 @@ func execLoginLink(b *OGame, loginLink string) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	return utils.ReadBody(resp)
+	pageHTML, err := utils.ReadBody(resp)
+	if err != nil {
+		return nil, err
+	}
+	pageHTML, err = b.introBypass(pageHTML)
+	return pageHTML, err
+}
+
+// V11 IntroBypass
+func (b *OGame) introBypass(pageHTML []byte) ([]byte, error) {
+	var err error
+	if bytes.Contains(pageHTML, []byte(`currentPage = "intro";`)) {
+		b.debug("bypassing intro page")
+		vals := url.Values{
+			"page":      {"ingame"},
+			"component": {"intro"},
+			"action":    {"continueToClassSelection"},
+		}
+		payload := url.Values{
+			"username":  {b.Player.PlayerName},
+			"isVeteran": {"1"},
+		}
+		pageHTML, err = b.postPageContent(vals, payload)
+		if err != nil {
+			return nil, err
+		}
+		pageHTML, err = b.getPage(OverviewPageName)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return pageHTML, nil
 }
 
 // Return either or not the bot logged in using the provided bearer token.
@@ -328,13 +363,11 @@ func (b *OGame) loginWithBearerToken(token string) (bool, error) {
 			if err != nil {
 				return true, err
 			}
-			page, err := getPage[parser.OverviewPage](b, SkipRetry)
+			page, err = parser.ParsePage[parser.OverviewPage](b.extractor, pageHTML)
 			if err != nil {
-				if err == ogame.ErrNotLogged {
-					err := b.login()
-					return false, err
-				}
+				return false, err
 			}
+
 			b.debug("login using existing cookies")
 			if err := b.loginPart3(userAccount, page); err != nil {
 				return false, err
@@ -538,6 +571,7 @@ func (b *OGame) login() error {
 	if err != nil {
 		return err
 	}
+
 	if err := b.loginPart3(userAccount, page); err != nil {
 		return err
 	}
@@ -661,15 +695,22 @@ func (b *OGame) loginPart2(server Server) error {
 func (b *OGame) loginPart3(userAccount Account, page parser.OverviewPage) error {
 	var ext extractor.Extractor = v9.NewExtractor()
 	if ogVersion, err := version.NewVersion(b.serverData.Version); err == nil {
-		if ogVersion.GreaterThanOrEqual(version.Must(version.NewVersion("9.0.0"))) {
+		b.serverVersion = ogVersion
+		if b.IsVGreaterThanOrEqual("11.0.0-beta25") {
+			ext = v11.NewExtractor()
+		} else if b.IsVGreaterThanOrEqual("10.4.0-beta2") {
+			ext = v104.NewExtractor()
+		} else if b.IsVGreaterThanOrEqual("10.0.0") {
+			ext = v10.NewExtractor()
+		} else if b.IsVGreaterThanOrEqual("9.0.0") {
 			ext = v9.NewExtractor()
-		} else if ogVersion.GreaterThanOrEqual(version.Must(version.NewVersion("8.7.4-pl3"))) {
+		} else if b.IsVGreaterThanOrEqual("8.7.4-pl3") {
 			ext = v874.NewExtractor()
-		} else if ogVersion.GreaterThanOrEqual(version.Must(version.NewVersion("8.0.0"))) {
+		} else if b.IsVGreaterThanOrEqual("8.0.0") {
 			ext = v8.NewExtractor()
-		} else if ogVersion.GreaterThanOrEqual(version.Must(version.NewVersion("7.1.0-rc0"))) {
+		} else if b.IsVGreaterThanOrEqual("7.1.0-rc0") {
 			ext = v71.NewExtractor()
-		} else if ogVersion.GreaterThanOrEqual(version.Must(version.NewVersion("7.0.0-rc0"))) {
+		} else if b.IsVGreaterThanOrEqual("7.0.0") {
 			ext = v7.NewExtractor()
 		}
 		ext.SetLanguage(b.language)
@@ -719,6 +760,11 @@ func (b *OGame) loginPart3(userAccount Account, page parser.OverviewPage) error 
 		}(b)
 	} else {
 		b.ReconnectChat()
+	}
+
+	// V11 Intro bypass
+	if _, err := b.introBypass(page.GetContent()); err != nil {
+		b.error("failed to bypass intro:", err)
 	}
 
 	return nil
@@ -1822,7 +1868,15 @@ func (b *OGame) setPreferences(p ogame.Preferences) error {
 		"selectedTab": {"0"},
 		"token":       {token},
 	}
-
+	if p.PlayerIntroductionIsVeteran {
+		payload.Set("playerIntroductionIsVeteran", "on")
+	}
+	if p.PlayerIntroductionHideHighlights {
+		payload.Set("playerIntroductionHideHighlights", "on")
+	}
+	if p.PlayerIntroductionHidePanel {
+		payload.Set("playerIntroductionHidePanel", "on")
+	}
 	if p.ShowOldDropDowns {
 		payload.Set("showOldDropDowns", "on")
 	}
@@ -3111,7 +3165,7 @@ func (b *OGame) IsV8() bool {
 
 // IsV9 ...
 func (b *OGame) IsV9() bool {
-	return len(b.ServerVersion()) > 0 && b.ServerVersion()[0] == '9' || len(b.ServerVersion()) > 1 && b.ServerVersion()[:2] == "10"
+	return len(b.ServerVersion()) > 0 && b.ServerVersion()[0] == '9' || len(b.ServerVersion()) > 1 // && b.ServerVersion()[:2] == "10"
 }
 
 // IsV10
@@ -3122,6 +3176,11 @@ func (b *OGame) IsV10() bool {
 // IsV11
 func (b *OGame) IsV11() bool {
 	return b.ServerVersion()[:2] == "11"
+}
+
+// IsVGreaterThanOrEqual ...
+func (b *OGame) IsVGreaterThanOrEqual(compareVersion string) bool {
+	return b.serverVersion.GreaterThanOrEqual(version.Must(version.NewVersion(compareVersion)))
 }
 
 func (b *OGame) technologyDetails(celestialID ogame.CelestialID, id ogame.ID) (ogame.TechnologyDetails, error) {
