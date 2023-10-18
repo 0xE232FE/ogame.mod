@@ -310,7 +310,7 @@ func (b *OGame) introBypass(pageHTML []byte) ([]byte, error) {
 			"username":  {b.Player.PlayerName},
 			"isVeteran": {"1"},
 		}
-		pageHTML, err = b.postPageContent(vals, payload)
+		_, err = b.postPageContent(vals, payload)
 		if err != nil {
 			return nil, err
 		}
