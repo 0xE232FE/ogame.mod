@@ -2,14 +2,15 @@ package main
 
 import (
 	"crypto/subtle"
+	"log"
+	"os"
+	"strconv"
+
 	"github.com/alaingilbert/ogame/pkg/device"
 	"github.com/alaingilbert/ogame/pkg/wrapper"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.in/urfave/cli.v2"
-	"log"
-	"os"
-	"strconv"
 )
 
 var version = "0.0.0"
@@ -195,13 +196,14 @@ func start(c *cli.Context) error {
 		SetHardwareConcurrency(16).
 		ScreenColorDepth(24).
 		SetScreenWidth(1900).
-		SetScreenHeight(900).
-		SetTimezone("America/Los_Angeles").
+		SetScreenHeight(1080).
+		SetTimezone("Europe/Berlin").
 		SetLanguages("en-US,en").
 		Build()
 	if err != nil {
 		panic(err)
 	}
+	deviceInst.GetBlackbox()
 
 	params := wrapper.Params{
 		Device:         deviceInst,

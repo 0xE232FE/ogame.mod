@@ -11,7 +11,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -202,7 +201,7 @@ func LoginAndAddAccount(device *device.Device, ctx context.Context, lobby, usern
 	if !found {
 		return nil, errors.New("server not found")
 	}
-	return AddAccount(device.GetClient(), ctx, lobby, server.AccountGroup, postSessionsRes.Token)
+	return AddAccount(device, ctx, lobby, server.AccountGroup, postSessionsRes.Token)
 }
 
 // AddAccountRes response from creating a new account
@@ -219,14 +218,21 @@ type AddAccountRes struct {
 
 func (r AddAccountRes) GetBearerToken() string { return r.BearerToken }
 
-func AddAccount(client httpclient.IHttpClient, ctx context.Context, lobby, accountGroup, sessionToken string) (*AddAccountRes, error) {
+// func AddAccount(client httpclient.IHttpClient, ctx context.Context, lobby, accountGroup, sessionToken string) (*AddAccountRes, error) {
+func AddAccount(dev *device.Device, ctx context.Context, lobby, accountGroup, sessionToken string) (*AddAccountRes, error) {
 	var payload struct {
 		AccountGroup string `json:"accountGroup"`
 		Locale       string `json:"locale"`
 		Kid          string `json:"kid"`
+		Blackbox     string `json:"blackbox"`
 	}
 	payload.AccountGroup = accountGroup // en_181
 	payload.Locale = "en_GB"
+	blackbox, err := dev.GetBlackbox()
+	if err != nil {
+		return nil, err
+	}
+	payload.Blackbox = "tra:" + blackbox
 	jsonPayloadBytes, err := json.Marshal(&payload)
 	if err != nil {
 		return nil, err
@@ -238,7 +244,7 @@ func AddAccount(client httpclient.IHttpClient, ctx context.Context, lobby, accou
 	req.Header.Add("authorization", "Bearer "+sessionToken)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept-Encoding", "gzip, deflate, br")
-	resp, err := client.Do(req.WithContext(ctx))
+	resp, err := dev.GetClient().Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -310,10 +316,12 @@ func GFLogin(dev *device.Device, ctx context.Context, lobby, username, password,
 
 	if resp.StatusCode == http.StatusForbidden {
 		log.Println("Forbidden")
-		err := os.Remove(device.DefaultStoragePath() + "/" + dev.GetName() + "/fingerprint")
-		if err != nil {
-			log.Println(err)
-		}
+		/*
+			err := os.Remove(device.DefaultStoragePath() + "/" + dev.GetName() + "/fingerprint")
+			if err != nil {
+				log.Println(err)
+			}
+		*/
 		return out, errors.New(resp.Status + " : " + string(by))
 	}
 
@@ -669,6 +677,9 @@ func GetLoginLink(dev *device.Device, ctx context.Context, lobby string, userAcc
 		lobby)
 
 	blackbox, err := dev.GetBlackbox()
+	if err != nil {
+		return "", err
+	}
 
 	var payload = struct {
 		Blackbox      string `json:"blackbox"`
@@ -713,7 +724,7 @@ func GetLoginLink(dev *device.Device, ctx context.Context, lobby string, userAcc
 	}
 	if string(by) == "[]" {
 		//log.Println(resp.Request.Response.Status)
-		os.Remove(device.DefaultStoragePath() + "/" + dev.GetName() + "/fingerprint")
+		//os.Remove(device.DefaultStoragePath() + "/" + dev.GetName() + "/fingerprint")
 	}
 	if resp != nil {
 		//log.Println(resp.Status)

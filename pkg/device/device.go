@@ -279,31 +279,31 @@ func (d *Builder) Build() (*Device, error) {
 }
 
 type JsFingerprint struct {
-	ConstantVersion       int
-	UserAgent             string
-	BrowserName           string
-	BrowserEngineName     string
-	NavigatorVendor       string
-	WebglInfo             string
-	XVecB64               string
-	XGame                 string
-	Timezone              string
-	OsName                string
-	Version               string
-	Languages             string
-	DeviceMemory          int
-	HardwareConcurrency   int
-	ScreenWidth           int
-	ScreenHeight          int
-	ScreenColorDepth      int
-	OfflineAudioCtx       float64
-	Canvas2DInfo          int
-	DateIso               string
-	Game1DateHeader       string
-	CalcDeltaMs           int64
-	NavigatorDoNotTrack   bool
-	LocalStorageEnabled   bool
-	SessionStorageEnabled bool
+	ConstantVersion     int
+	UserAgent           string
+	BrowserName         string
+	BrowserEngineName   string
+	NavigatorVendor     string
+	WebglInfo           string
+	XVecB64             string
+	XGame               string
+	Timezone            string
+	OsName              string
+	Version             string
+	Languages           string
+	DeviceMemory        int
+	HardwareConcurrency int
+	ScreenWidth         int
+	ScreenHeight        int
+	ScreenColorDepth    int
+	OfflineAudioCtx     float64
+	Canvas2DInfo        int
+	DateIso             string
+	Game1DateHeader     string
+	CalcDeltaMs         int64
+	NavigatorDoNotTrack bool
+	//LocalStorageEnabled   bool
+	//SessionStorageEnabled bool
 	VideoHash             string
 	AudioCtxHash          string
 	AudioHash             string
@@ -324,31 +324,31 @@ func (d *Device) GetBlackbox() (string, error) {
 
 	xVec := GenNewXVec()
 	fprt := &JsFingerprint{
-		ConstantVersion:       8,
-		UserAgent:             d.userAgent,
-		BrowserName:           string(d.browserName),
-		BrowserEngineName:     d.browserEngineName,
-		NavigatorVendor:       d.navigatorVendor,
-		WebglInfo:             d.webglInfo,
-		XVecB64:               base64.StdEncoding.EncodeToString([]byte(xVec)),
-		XGame:                 Get27RandChars(3),
-		Timezone:              d.timezone,
-		OsName:                string(d.osName),
-		Version:               d.osVersion,
-		Languages:             d.languages,
-		DeviceMemory:          d.memory,
-		HardwareConcurrency:   d.hardwareConcurrency,
-		ScreenWidth:           d.screenWidth,
-		ScreenHeight:          d.screenHeight,
-		ScreenColorDepth:      d.screenColorDepth,
-		OfflineAudioCtx:       d.offlineAudioCtx,
-		Canvas2DInfo:          d.canvas2DInfo,
-		DateIso:               time.Now().UTC().Format(javascriptISOString),
-		Game1DateHeader:       game1DateHeader,
-		CalcDeltaMs:           elapsed,
-		NavigatorDoNotTrack:   false,
-		LocalStorageEnabled:   true,
-		SessionStorageEnabled: true,
+		ConstantVersion:     9,
+		UserAgent:           d.userAgent,
+		BrowserName:         string(d.browserName),
+		BrowserEngineName:   d.browserEngineName,
+		NavigatorVendor:     d.navigatorVendor,
+		WebglInfo:           d.webglInfo,
+		XVecB64:             base64.StdEncoding.EncodeToString([]byte(xVec)),
+		XGame:               Get27RandChars(3),
+		Timezone:            d.timezone,
+		OsName:              string(d.osName),
+		Version:             d.osVersion,
+		Languages:           d.languages,
+		DeviceMemory:        d.memory,
+		HardwareConcurrency: d.hardwareConcurrency,
+		ScreenWidth:         d.screenWidth,
+		ScreenHeight:        d.screenHeight,
+		ScreenColorDepth:    d.screenColorDepth,
+		OfflineAudioCtx:     d.offlineAudioCtx,
+		Canvas2DInfo:        d.canvas2DInfo,
+		DateIso:             time.Now().UTC().Format(javascriptISOString),
+		Game1DateHeader:     game1DateHeader,
+		CalcDeltaMs:         elapsed,
+		NavigatorDoNotTrack: false,
+		//LocalStorageEnabled:   true,
+		//SessionStorageEnabled: true,
 		VideoHash:             randFakeHash(),
 		AudioCtxHash:          randFakeHash(),
 		AudioHash:             randFakeHash(),
@@ -395,25 +395,25 @@ func (d *Device) GetBlackbox() (string, error) {
 
 func (f *JsFingerprint) MarshalJSON() ([]byte, error) {
 	toEnc := make([]any, 0)
-	toEnc = append(toEnc, f.ConstantVersion)       // dg constant
-	toEnc = append(toEnc, f.Timezone)              // dO4 Intl.DateTimeFormat()['resolvedOptions']().timeZone
-	toEnc = append(toEnc, f.NavigatorDoNotTrack)   // ZNJG navigator.doNotTrack || false
-	toEnc = append(toEnc, f.BrowserEngineName)     // 'cOJRtSqNAQ': getBrowserRenderingEngine(browserInfo['name']),
-	toEnc = append(toEnc, f.OsName)                // 'b-I2rx-E': osInfo['name'],
-	toEnc = append(toEnc, f.BrowserName)           // 'YdFB': browserInfo['name'],
-	toEnc = append(toEnc, f.NavigatorVendor)       // 'dttJrRyO': navigator.vendor,
-	toEnc = append(toEnc, f.DeviceMemory)          // 'bdI_': navigator.deviceMemory || 0,
-	toEnc = append(toEnc, f.HardwareConcurrency)   // 'Y9JA': navigator.hardwareConcurrency || 0,
-	toEnc = append(toEnc, f.Languages)             // 'bM07og': navigator.languages.join(','),
-	toEnc = append(toEnc, f.PluginsHash)           // 'cNxRuCGPAg': produceDeterministicHash(getPluginsInfo()),
-	toEnc = append(toEnc, f.WebglInfo)             // 'Z9dM': webglInfo['vendor'] + ',' + webglInfo['renderer'],
-	toEnc = append(toEnc, f.FontsHash)             // 'ZtVDtyo': produceDeterministicHash(getFontsInfo()),
-	toEnc = append(toEnc, f.AudioCtxHash)          // 'YdY6oxJV': produceDeterministicHash(getAudioContextInfo()),
-	toEnc = append(toEnc, f.ScreenWidth)           // 'd-BEuCA': window.screen.availWidth,
-	toEnc = append(toEnc, f.ScreenHeight)          // 'aM02nQV5': window.screen.availHeight,
-	toEnc = append(toEnc, f.ScreenColorDepth)      // 'ZMk5rRU': window.screen.colorDepth,
-	toEnc = append(toEnc, f.LocalStorageEnabled)   // 'bL8zohR5': Boolean(localStorage),
-	toEnc = append(toEnc, f.SessionStorageEnabled) // 'c8Y6qRuA': Boolean(sessionStorage),
+	toEnc = append(toEnc, f.ConstantVersion)     // dg constant
+	toEnc = append(toEnc, f.Timezone)            // dO4 Intl.DateTimeFormat()['resolvedOptions']().timeZone
+	toEnc = append(toEnc, f.NavigatorDoNotTrack) // ZNJG navigator.doNotTrack || false
+	toEnc = append(toEnc, f.BrowserEngineName)   // 'cOJRtSqNAQ': getBrowserRenderingEngine(browserInfo['name']),
+	toEnc = append(toEnc, f.OsName)              // 'b-I2rx-E': osInfo['name'],
+	toEnc = append(toEnc, f.BrowserName)         // 'YdFB': browserInfo['name'],
+	toEnc = append(toEnc, f.NavigatorVendor)     // 'dttJrRyO': navigator.vendor,
+	toEnc = append(toEnc, f.DeviceMemory)        // 'bdI_': navigator.deviceMemory || 0,
+	toEnc = append(toEnc, f.HardwareConcurrency) // 'Y9JA': navigator.hardwareConcurrency || 0,
+	toEnc = append(toEnc, f.Languages)           // 'bM07og': navigator.languages.join(','),
+	toEnc = append(toEnc, f.PluginsHash)         // 'cNxRuCGPAg': produceDeterministicHash(getPluginsInfo()),
+	toEnc = append(toEnc, f.WebglInfo)           // 'Z9dM': webglInfo['vendor'] + ',' + webglInfo['renderer'],
+	toEnc = append(toEnc, f.FontsHash)           // 'ZtVDtyo': produceDeterministicHash(getFontsInfo()),
+	toEnc = append(toEnc, f.AudioCtxHash)        // 'YdY6oxJV': produceDeterministicHash(getAudioContextInfo()),
+	toEnc = append(toEnc, f.ScreenWidth)         // 'd-BEuCA': window.screen.availWidth,
+	toEnc = append(toEnc, f.ScreenHeight)        // 'aM02nQV5': window.screen.availHeight,
+	toEnc = append(toEnc, f.ScreenColorDepth)    // 'ZMk5rRU': window.screen.colorDepth,
+	//toEnc = append(toEnc, f.LocalStorageEnabled)   // 'bL8zohR5': Boolean(localStorage),
+	//toEnc = append(toEnc, f.SessionStorageEnabled) // 'c8Y6qRuA': Boolean(sessionStorage),
 	toEnc = append(toEnc, f.VideoHash)             // 'dt9DqBc': produceDeterministicHash(getVideoPropsInfo()),
 	toEnc = append(toEnc, f.AudioHash)             // 'YdY6oxI': produceDeterministicHash(getAudioPropsInfo()),
 	toEnc = append(toEnc, f.MediaDevicesHash)      // 'bdI2nwA': produceDeterministicHash(promises[1]),
@@ -1013,7 +1013,7 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 		return nil, errors.New("failed to parse ConstantVersion")
 	}
 	fingerprint.ConstantVersion = int(constantVersion)
-	fingerprint.UserAgent, ok = arr[31].(string)
+	fingerprint.UserAgent, ok = arr[29].(string)
 	if !ok {
 		return nil, errors.New("failed to parse UserAgent")
 	}
@@ -1033,11 +1033,11 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse WebglInfo")
 	}
-	fingerprint.XVecB64, ok = arr[30].(string)
+	fingerprint.XVecB64, ok = arr[28].(string)
 	if !ok {
 		return nil, errors.New("failed to parse XVecB64")
 	}
-	fingerprint.XGame, ok = arr[27].(string)
+	fingerprint.XGame, ok = arr[25].(string)
 	if !ok {
 		return nil, errors.New("failed to parse XGame")
 	}
@@ -1049,7 +1049,7 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse OsName")
 	}
-	fingerprint.Version, ok = arr[29].(string)
+	fingerprint.Version, ok = arr[27].(string)
 	if !ok {
 		return nil, errors.New("failed to parse Version")
 	}
@@ -1082,24 +1082,24 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 		return nil, errors.New("failed to parse ScreenColorDepth")
 	}
 	fingerprint.ScreenColorDepth = int(screenColorDepth)
-	fingerprint.OfflineAudioCtx, ok = arr[23].(float64)
+	fingerprint.OfflineAudioCtx, ok = arr[21].(float64)
 	if !ok {
 		return nil, errors.New("failed to parse OfflineAudioCtx")
 	}
-	canvas2DInfo, ok := arr[25].(float64)
+	canvas2DInfo, ok := arr[23].(float64)
 	if !ok {
 		return nil, errors.New("failed to parse Canvas2DInfo")
 	}
 	fingerprint.Canvas2DInfo = int(canvas2DInfo)
-	fingerprint.DateIso, ok = arr[26].(string)
+	fingerprint.DateIso, ok = arr[24].(string)
 	if !ok {
 		return nil, errors.New("failed to parse DateIso")
 	}
-	fingerprint.Game1DateHeader, ok = arr[32].(string)
+	fingerprint.Game1DateHeader, ok = arr[30].(string)
 	if !ok {
 		return nil, errors.New("failed to parse Game1DateHeader")
 	}
-	calcDeltaMs, ok := arr[28].(float64)
+	calcDeltaMs, ok := arr[26].(float64)
 	if !ok {
 		return nil, errors.New("failed to parse CalcDeltaMs")
 	}
@@ -1108,15 +1108,15 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse NavigatorDoNotTrack")
 	}
-	fingerprint.LocalStorageEnabled, ok = arr[17].(bool)
-	if !ok {
-		return nil, errors.New("failed to parse LocalStorageEnabled")
-	}
-	fingerprint.SessionStorageEnabled, ok = arr[18].(bool)
-	if !ok {
-		return nil, errors.New("failed to parse SessionStorageEnabled")
-	}
-	fingerprint.VideoHash, ok = arr[19].(string)
+	// fingerprint.LocalStorageEnabled, ok = arr[17].(bool)
+	// if !ok {
+	// 	return nil, errors.New("failed to parse LocalStorageEnabled")
+	// }
+	// fingerprint.SessionStorageEnabled, ok = arr[18].(bool)
+	// if !ok {
+	// 	return nil, errors.New("failed to parse SessionStorageEnabled")
+	// }
+	fingerprint.VideoHash, ok = arr[17].(string)
 	if !ok {
 		return nil, errors.New("failed to parse VideoHash")
 	}
@@ -1124,7 +1124,7 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse AudioCtxHash")
 	}
-	fingerprint.AudioHash, ok = arr[20].(string)
+	fingerprint.AudioHash, ok = arr[18].(string)
 	if !ok {
 		return nil, errors.New("failed to parse AudioHash")
 	}
@@ -1136,15 +1136,15 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse PluginsHash")
 	}
-	fingerprint.MediaDevicesHash, ok = arr[21].(string)
+	fingerprint.MediaDevicesHash, ok = arr[19].(string)
 	if !ok {
 		return nil, errors.New("failed to parse MediaDevicesHash")
 	}
-	fingerprint.PermissionsStatesHash, ok = arr[22].(string)
+	fingerprint.PermissionsStatesHash, ok = arr[20].(string)
 	if !ok {
 		return nil, errors.New("failed to parse PermissionsStatesHash")
 	}
-	fingerprint.WebglRenderHash, ok = arr[24].(string)
+	fingerprint.WebglRenderHash, ok = arr[22].(string)
 	if !ok {
 		return nil, errors.New("failed to parse WebglRenderHash")
 	}

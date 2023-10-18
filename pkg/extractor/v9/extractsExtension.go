@@ -2,6 +2,8 @@ package v9
 
 import (
 	"bytes"
+	"errors"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -37,4 +39,18 @@ func extractMessagesFromDoc(doc *goquery.Document, location *time.Location) ([]o
 		}
 	})
 	return msgs, nbPage, nil
+}
+
+// ExtractUpgradeToken ...
+func (e *Extractor) ExtractUpgradeToken(pageHTML []byte) (string, error) {
+	return extractUpgradeToken(pageHTML)
+}
+
+func extractUpgradeToken(pageHTML []byte) (string, error) {
+	rgx := regexp.MustCompile(`var token = "([^"]+)"`)
+	m := rgx.FindSubmatch(pageHTML)
+	if len(m) != 2 {
+		return "", errors.New("unable to find form token")
+	}
+	return string(m[1]), nil
 }

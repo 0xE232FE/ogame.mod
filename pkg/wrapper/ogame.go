@@ -961,7 +961,7 @@ func (b *OGame) SetProxy(proxyAddress, username, password, proxyType string, log
 }
 
 func (b *OGame) connectChat(chatRetry *exponentialBackoff.ExponentialBackoff, host, port string) {
-	if b.IsV8() || b.IsV9() {
+	if b.IsV8() || b.IsV9() || b.IsV10() || b.IsV11() {
 		b.connectChatV8(chatRetry, host, port)
 	} else {
 		b.connectChatV7(chatRetry, host, port)
@@ -3114,6 +3114,16 @@ func (b *OGame) IsV9() bool {
 	return len(b.ServerVersion()) > 0 && b.ServerVersion()[0] == '9' || len(b.ServerVersion()) > 1 && b.ServerVersion()[:2] == "10"
 }
 
+// IsV10
+func (b *OGame) IsV10() bool {
+	return b.ServerVersion()[:2] == "10"
+}
+
+// IsV11
+func (b *OGame) IsV11() bool {
+	return b.ServerVersion()[:2] == "11"
+}
+
 func (b *OGame) technologyDetails(celestialID ogame.CelestialID, id ogame.ID) (ogame.TechnologyDetails, error) {
 	pageHTML, _ := b.getPageContent(url.Values{
 		"page":       {"ingame"},
@@ -3203,29 +3213,56 @@ func (b *OGame) build(celestialID ogame.CelestialID, id ogame.ID, nbr int64) err
 	}
 	vals.Add("token", token)
 
-	if id.IsDefense() || id.IsShip() {
-		var maximumNbr int64 = 99999
-		var err error
-		var token string
-		for nbr > 0 {
-			tmp := int64(math.Min(float64(nbr), float64(maximumNbr)))
-			vals.Set("menge", utils.FI64(tmp))
-			_, err = b.getPageContent(vals)
-			if err != nil {
-				break
-			}
-			token, err = getToken(b, page, celestialID)
-			if err != nil {
-				break
-			}
-			vals.Set("token", token)
-			nbr -= maximumNbr
+	if true {
+		vals := url.Values{
+			"page":      {"componentOnly"},
+			"component": {"buildlistactions"},
+			"action":    {"scheduleEntry"},
+			"asJson":    {"1"},
 		}
+
+		var amount int64 = 1
+		if id.IsShip() || id.IsDefense() {
+			var maximumNbr int64 = 99999
+			amount = int64(math.Min(float64(nbr), float64(maximumNbr)))
+		}
+
+		payload := url.Values{
+			"technologyId": {utils.FI64(id)},
+			"amount":       {utils.FI64(amount)},
+			"mode":         {"1"},
+			"token":        {token},
+			"planetId":     {utils.FI64(celestialID)},
+		}
+
+		_, err = b.postPageContent(vals, payload)
+		return err
+	} else {
+		if id.IsDefense() || id.IsShip() {
+			var maximumNbr int64 = 99999
+			var err error
+			var token string
+			for nbr > 0 {
+				tmp := int64(math.Min(float64(nbr), float64(maximumNbr)))
+				vals.Set("menge", utils.FI64(tmp))
+				_, err = b.getPageContent(vals)
+				if err != nil {
+					break
+				}
+				token, err = getToken(b, page, celestialID)
+				if err != nil {
+					break
+				}
+				vals.Set("token", token)
+				nbr -= maximumNbr
+			}
+			return err
+		}
+
+		_, err = b.getPageContent(vals)
 		return err
 	}
 
-	_, err = b.getPageContent(vals)
-	return err
 }
 
 func (b *OGame) buildCancelable(celestialID ogame.CelestialID, id ogame.ID) error {
@@ -3479,6 +3516,232 @@ type CheckTargetResponse struct {
 		Num9  bool `json:"9"`
 		Num15 bool `json:"15"`
 	} `json:"orders"`
+	ShipsData struct {
+		Num202 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"202"`
+		Num203 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"203"`
+		Num204 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"204"`
+		Num205 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"205"`
+		Num206 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"206"`
+		Num207 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"207"`
+		Num208 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"208"`
+		Num209 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"209"`
+		Num210 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"210"`
+		Num211 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"211"`
+		Num213 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"213"`
+		Num214 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"214"`
+		Num215 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"215"`
+		Num217 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"217"`
+		Num218 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"218"`
+		Num219 struct {
+			ID                  int    `json:"id"`
+			Name                string `json:"name"`
+			BaseFuelConsumption int    `json:"baseFuelConsumption"`
+			BaseFuelCapacity    int    `json:"baseFuelCapacity"`
+			BaseCargoCapacity   int    `json:"baseCargoCapacity"`
+			FuelConsumption     int    `json:"fuelConsumption"`
+			BaseSpeed           int    `json:"baseSpeed"`
+			Speed               int    `json:"speed"`
+			CargoCapacity       int    `json:"cargoCapacity"`
+			FuelCapacity        int    `json:"fuelCapacity"`
+			Number              int    `json:"number"`
+			RecycleMode         int    `json:"recycleMode"`
+		} `json:"219"`
+	} `json:"shipsData"`
 	TargetInhabited           bool   `json:"targetInhabited"`
 	TargetIsStrong            bool   `json:"targetIsStrong"`
 	TargetIsOutlaw            bool   `json:"targetIsOutlaw"`
@@ -3598,7 +3861,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifia
 	}
 
 	tokenM := regexp.MustCompile(`var fleetSendingToken = "([^"]+)";`).FindSubmatch(pageHTML)
-	if b.IsV8() || b.IsV9() {
+	if len(tokenM) != 2 { //if b.IsV8() || b.IsV9() {
 		tokenM = regexp.MustCompile(`var token = "([^"]+)";`).FindSubmatch(pageHTML)
 	}
 	if len(tokenM) != 2 {
@@ -3670,7 +3933,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifia
 	newResources.Deuterium = utils.MaxInt(newResources.Deuterium, 0)
 
 	// Page 3 : select coord, mission, speed
-	if b.IsV8() || b.IsV9() {
+	if b.IsV8() || b.IsV9() || b.IsV10() || b.IsV11() {
 		payload.Set("token", checkRes.NewAjaxToken)
 	}
 	payload.Set("speed", strconv.FormatInt(int64(speed), 10))
@@ -4132,7 +4395,7 @@ func (b *OGame) botUnlock(unlockedBy string) {
 
 func (b *OGame) addAccount(number int, lang string) (*AddAccountRes, error) {
 	accountGroup := fmt.Sprintf("%s_%d", lang, number)
-	return AddAccount(b.device.GetClient(), b.ctx, b.lobby, accountGroup, b.bearerToken)
+	return AddAccount(b.device, b.ctx, b.lobby, accountGroup, b.bearerToken)
 }
 
 func (b *OGame) getCachedCelestial(v any) Celestial {
