@@ -488,6 +488,56 @@ func StartCaptchaChallenge(client httpclient.IHttpClient, ctx context.Context, c
 	return
 }
 
+func ReloadCaptchaChallenge(client httpclient.IHttpClient, ctx context.Context, challengeID string) (questionRaw, iconsRaw []byte, newChallengeID string, err error) {
+	type responseChallenge struct {
+		ID string
+	}
+	req, err := http.NewRequest(http.MethodDelete, "https://image-drop-challenge.gameforge.com/challenge/"+challengeID+"/en-GB", nil)
+	if err != nil {
+		return
+	}
+	req.WithContext(ctx)
+	questionResp, err := client.Do(req) //{"id":"f8a5b1cd-c2f1-4ebd-9ebf-b3aab03c9a94","lastUpdated":1697778856341,"status":"presented"}
+	if err != nil {
+		return
+	}
+	defer questionResp.Body.Close()
+	newChallenge, _ := ioutil.ReadAll(questionResp.Body)
+	var newChallengeResp responseChallenge
+	err = json.Unmarshal(newChallenge, &newChallengeResp)
+	if err != nil {
+		return
+	}
+	newChallengeID = newChallengeResp.ID
+
+	// Question request
+	req, err = http.NewRequest(http.MethodGet, "https://image-drop-challenge.gameforge.com/challenge/"+newChallengeResp.ID+"/en-GB/text", nil)
+	if err != nil {
+		return
+	}
+	req.WithContext(ctx)
+	questionResp, err = client.Do(req)
+	if err != nil {
+		return
+	}
+	defer questionResp.Body.Close()
+	questionRaw, _ = ioutil.ReadAll(questionResp.Body)
+
+	// Icons request
+	req, err = http.NewRequest(http.MethodGet, "https://image-drop-challenge.gameforge.com/challenge/"+newChallengeResp.ID+"/en-GB/drag-icons", nil)
+	if err != nil {
+		return
+	}
+	req.WithContext(ctx)
+	iconsResp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer iconsResp.Body.Close()
+	iconsRaw, _ = ioutil.ReadAll(iconsResp.Body)
+	return
+}
+
 func SolveChallenge(client httpclient.IHttpClient, ctx context.Context, challengeID string, answer int64) error {
 	challengeURL := "https://image-drop-challenge.gameforge.com/challenge/" + challengeID + "/en-GB"
 	body := strings.NewReader(`{"answer":` + utils.FI64(answer) + `}`)
