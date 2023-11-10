@@ -488,7 +488,7 @@ func StartCaptchaChallenge(client httpclient.IHttpClient, ctx context.Context, c
 	return
 }
 
-func ReloadCaptchaChallenge(client httpclient.IHttpClient, ctx context.Context, challengeID string) (questionRaw, iconsRaw []byte, err error) {
+func ReloadCaptchaChallenge(client httpclient.IHttpClient, ctx context.Context, challengeID string) (questionRaw, iconsRaw []byte, newChallengeID string, err error) {
 	type responseChallenge struct {
 		ID string
 	}
@@ -504,7 +504,11 @@ func ReloadCaptchaChallenge(client httpclient.IHttpClient, ctx context.Context, 
 	defer questionResp.Body.Close()
 	newChallenge, _ := ioutil.ReadAll(questionResp.Body)
 	var newChallengeResp responseChallenge
-	json.Unmarshal(newChallenge, &newChallengeResp)
+	err = json.Unmarshal(newChallenge, &newChallengeResp)
+	if err != nil {
+		return
+	}
+	newChallengeID = newChallengeResp.ID
 
 	// Question request
 	req, err = http.NewRequest(http.MethodGet, "https://image-drop-challenge.gameforge.com/challenge/"+newChallengeResp.ID+"/en-GB/text", nil)
