@@ -73,6 +73,7 @@ func (s SystemInfos) MarshalJSON() ([]byte, error) {
 		ExpeditionDebris struct {
 			Metal             int64
 			Crystal           int64
+			Deuterium         int64
 			PathfindersNeeded int64
 		}
 	}
@@ -81,6 +82,7 @@ func (s SystemInfos) MarshalJSON() ([]byte, error) {
 	tmp.Planets = s.planets
 	tmp.ExpeditionDebris.Metal = s.ExpeditionDebris.Metal
 	tmp.ExpeditionDebris.Crystal = s.ExpeditionDebris.Crystal
+	tmp.ExpeditionDebris.Deuterium = s.ExpeditionDebris.Deuterium
 	tmp.ExpeditionDebris.PathfindersNeeded = s.ExpeditionDebris.PathfindersNeeded
 	return json.Marshal(tmp)
 }

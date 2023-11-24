@@ -90,7 +90,7 @@ var (
 	CrystalRefinery                   = register[*crystalRefinery](newCrystalRefinery)
 	DeuteriumSynthesiser              = register[*deuteriumSynthesiser](newDeuteriumSynthesiser)
 	MineralResearchCentre             = register[*mineralResearchCentre](newMineralResearchCentre)
-	MetalRecyclingPlant               = register[*metalRecyclingPlant](newMetalRecyclingPlant)
+	AdvancedRecyclingPlant            = register[*advancedRecyclingPlant](newAdvancedRecyclingPlant)
 	AssemblyLine                      = register[*assemblyLine](newAssemblyLine) //Mechas
 	FusionCellFactory                 = register[*fusionCellFactory](newFusionCellFactory)
 	RoboticsResearchCentre            = register[*roboticsResearchCentre](newRoboticsResearchCentre)
@@ -193,6 +193,10 @@ type ObjsStruct struct{ m map[ID]BaseOgameObj }
 
 func (o ObjsStruct) ByID(id ID) BaseOgameObj {
 	return o.m[id]
+}
+
+func (o ObjsStruct) GetAllObjs() map[ID]BaseOgameObj {
+	return o.m
 }
 
 var Objs = ObjsStruct{m: make(map[ID]BaseOgameObj)}
@@ -321,3 +325,129 @@ var Technologies = []Technology{
 	ShieldingTechnology,
 	ArmourTechnology,
 }
+
+// var LfBuildinObjs = []Building{
+// 	ResidentialSector, // Human Building
+// 	BiosphereFarm,
+// 	ResearchCentre,
+// 	AcademyOfSciences,
+// 	NeuroCalibrationCentre,
+// 	HighEnergySmelting,
+// 	FoodSilo,
+// 	FusionPoweredProduction,
+// 	Skyscraper,
+// 	BiotechLab,
+// 	Metropolis,
+// 	PlanetaryShield,
+// 	MeditationEnclave, //Rocktal Building
+// 	CrystalFarm,
+// 	RuneTechnologium,
+// 	RuneForge,
+// 	Oriktorium,
+// 	MagmaForge,
+// 	DisruptionChamber,
+// 	Megalith,
+// 	CrystalRefinery,
+// 	DeuteriumSynthesiser,
+// 	MineralResearchCentre,
+// 	AdvancedRecyclingPlant,
+// 	AssemblyLine, //Mechas Building
+// 	FusionCellFactory,
+// 	RoboticsResearchCentre,
+// 	UpdateNetwork,
+// 	QuantumComputerCentre,
+// 	AutomatisedAssemblyCentre,
+// 	HighPerformanceTransformer,
+// 	MicrochipAssemblyLine,
+// 	ProductionAssemblyHall,
+// 	HighPerformanceSynthesiser,
+// 	ChipMassProduction,
+// 	NanoRepairBots,
+// 	Sanctuary, //Kaelesh Building
+// 	AntimatterCondenser,
+// 	VortexChamber,
+// 	HallsOfRealisation,
+// 	ForumOfTranscendence,
+// 	AntimatterConvector,
+// 	CloningLaboratory,
+// 	ChrysalisAccelerator,
+// 	BioModifier,
+// 	PsionicModulator,
+// 	ShipManufacturingHall,
+// 	SupraRefractor,
+// }
+
+// var LfTechnologyObjs = []Technology{
+// 	IntergalacticEnvoys, // Humans tech
+// 	HighPerformanceExtractors,
+// 	FusionDrives,
+// 	StealthFieldGenerator,
+// 	OrbitalDen,
+// 	ResearchAI,
+// 	HighPerformanceTerraformer,
+// 	EnhancedProductionTechnologies,
+// 	LightFighterMkII,
+// 	CruiserMkII,
+// 	ImprovedLabTechnology,
+// 	PlasmaTerraformer,
+// 	LowTemperatureDrives,
+// 	BomberMkII,
+// 	DestroyerMkII,
+// 	BattlecruiserMkII,
+// 	RobotAssistants,
+// 	Supercomputer,
+// 	VolcanicBatteries, //Rocktal techs
+// 	AcousticScanning,
+// 	HighEnergyPumpSystems,
+// 	CargoHoldExpansionCivilianShips,
+// 	MagmaPoweredProduction,
+// 	GeothermalPowerPlants,
+// 	DepthSounding,
+// 	IonCrystalEnhancementHeavyFighter,
+// 	ImprovedStellarator,
+// 	HardenedDiamondDrillHeads,
+// 	SeismicMiningTechnology,
+// 	MagmaPoweredPumpSystems,
+// 	IonCrystalModules,
+// 	OptimisedSiloConstructionMethod,
+// 	DiamondEnergyTransmitter,
+// 	ObsidianShieldReinforcement,
+// 	RuneShields,
+// 	RocktalCollectorEnhancement,
+// 	CatalyserTechnology, //Mechas techs
+// 	PlasmaDrive,
+// 	EfficiencyModule,
+// 	DepotAI,
+// 	GeneralOverhaulLightFighter,
+// 	AutomatedTransportLines,
+// 	ImprovedDroneAI,
+// 	ExperimentalRecyclingTechnology,
+// 	GeneralOverhaulCruiser,
+// 	SlingshotAutopilot,
+// 	HighTemperatureSuperconductors,
+// 	GeneralOverhaulBattleship,
+// 	ArtificialSwarmIntelligence,
+// 	GeneralOverhaulBattlecruiser,
+// 	GeneralOverhaulBomber,
+// 	GeneralOverhaulDestroyer,
+// 	ExperimentalWeaponsTechnology,
+// 	MechanGeneralEnhancement,
+// 	HeatRecovery, //Kaelesh techs
+// 	SulphideProcess,
+// 	PsionicNetwork,
+// 	TelekineticTractorBeam,
+// 	EnhancedSensorTechnology,
+// 	NeuromodalCompressor,
+// 	NeuroInterface,
+// 	InterplanetaryAnalysisNetwork,
+// 	OverclockingHeavyFighter,
+// 	TelekineticDrive,
+// 	SixthSense,
+// 	Psychoharmoniser,
+// 	EfficientSwarmIntelligence,
+// 	OverclockingLargeCargo,
+// 	GravitationSensors,
+// 	OverclockingBattleship,
+// 	PsionicShieldMatrix,
+// 	KaeleshDiscovererEnhancement,
+// }

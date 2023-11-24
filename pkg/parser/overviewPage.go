@@ -31,3 +31,7 @@ func (p OverviewPage) ExtractCancelBuildingInfos() (token string, techID, listID
 func (p OverviewPage) ExtractCancelLfBuildingInfos() (token string, id, listID int64, err error) {
 	return p.e.ExtractCancelLfBuildingInfos(p.content)
 }
+
+func (p OverviewPage) ExtractOverviewProduction() ([]ogame.Quantifiable, int64, error) {
+	return p.e.ExtractOverviewProduction(p.content)
+}

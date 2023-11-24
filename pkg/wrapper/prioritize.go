@@ -125,6 +125,13 @@ func (b *Prioritize) IsUnderAttack() (bool, error) {
 	return b.bot.isUnderAttack()
 }
 
+// IsUnderAttack returns true if the user is under attack, false otherwise
+func (b *Prioritize) IsUnderAttackByID(CelestialID ogame.CelestialID) (bool, error) {
+	b.begin("IsUnderAttackByID")
+	defer b.done()
+	return b.bot.isUnderAttackByID(CelestialID)
+}
+
 // SetVacationMode puts account in vacation mode
 func (b *Prioritize) SetVacationMode() error {
 	b.begin("SetVacationMode")
@@ -452,6 +459,13 @@ func (b *Prioritize) SendFleet(celestialID ogame.CelestialID, ships []ogame.Quan
 	b.begin("SendFleet")
 	defer b.done()
 	return b.bot.sendFleet(celestialID, ships, speed, where, mission, resources, holdingTime, unionID, false)
+}
+
+// SendDiscovery sends a discovery fleet
+func (b *Prioritize) SendDiscovery(celestialID ogame.CelestialID, where ogame.Coordinate) (bool, error) {
+	b.begin("SendDiscovery")
+	defer b.done()
+	return b.bot.sendDiscovery(celestialID, where)
 }
 
 // EnsureFleet either sends all the requested ships or fail

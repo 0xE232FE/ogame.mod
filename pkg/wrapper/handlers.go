@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 
 	"github.com/alaingilbert/ogame/pkg/ogame"
@@ -154,6 +155,19 @@ func ServerTimeHandler(c echo.Context) error {
 func IsUnderAttackHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	isUnderAttack, err := bot.IsUnderAttack()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(isUnderAttack))
+}
+
+func IsUnderAttackByIDHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	planetID, err := utils.ParseI64(c.Param("planetID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
+	}
+	isUnderAttack, err := bot.IsUnderAttackByID(ogame.CelestialID(planetID))
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
@@ -395,6 +409,32 @@ func GetPlanetsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planets, _ := bot.GetPlanets()
 	return c.JSON(http.StatusOK, SuccessResp(planets))
+}
+
+// CelestialAbandonHandler ...
+func CelestialAbandonHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	celestialID, err := utils.ParseI64(c.Param("celestialID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid celestial id"))
+	}
+	err = bot.Abandon(celestialID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	_, err = bot.GetCelestial(celestialID)
+	if err != nil {
+		return c.JSON(http.StatusOK, SuccessResp(struct {
+			CelestialID int64
+			Result      string
+		}{
+			CelestialID: celestialID,
+			Result:      "succeed",
+		}))
+	} else {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "Celestial could not be deleted"))
+	}
+
 }
 
 // GetCelestialItemsHandler ...
@@ -880,7 +920,7 @@ func GetPriceHandler(c echo.Context) error {
 }
 
 // SendFleetHandler ...
-// curl 127.0.0.1:1234/bot/planets/123/send-fleet -d 'ships=203,1&ships=204,10&speed=10&galaxy=1&system=1&type=1&position=1&mission=3&metal=1&crystal=2&deuterium=3'
+// curl 127.0.0.1:1234/bot/planets/123/send-fleet -d 'galaxy=1&system=1&position=1'
 func SendFleetHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
@@ -1004,12 +1044,60 @@ func SendFleetHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(fleet))
 }
 
+// SendDiscoveryHandler ...
+// curl 127.0.0.1:1234/bot/planets/123/send-discovery -d 'galaxy=1&system=1&type=1&position=1'
+func SendDiscoveryHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	planetID, err := utils.ParseI64(c.Param("planetID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
+	}
+
+	if err := c.Request().ParseForm(); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid form"))
+	}
+
+	where := ogame.Coordinate{Type: ogame.PlanetType}
+	for key, values := range c.Request().PostForm {
+		switch key {
+		case "galaxy":
+			galaxy, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid galaxy"))
+			}
+			where.Galaxy = galaxy
+		case "system":
+			system, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid system"))
+			}
+			where.System = system
+		case "position":
+			position, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid position"))
+			}
+			where.Position = position
+		}
+	}
+
+	res, err := bot.SendDiscovery(ogame.CelestialID(planetID), where)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	if res == false {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "failed to send discovery"))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(res))
+}
+
 // GetAlliancePageContentHandler ...
 func GetAlliancePageContentHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	allianceID := c.QueryParam("allianceId")
 	vals := url.Values{"allianceId": {allianceID}}
 	pageHTML, _ := bot.GetPageContent(vals)
+	pageHTML = removeCookiesBanner(pageHTML)
 	return c.HTML(http.StatusOK, string(pageHTML))
 }
 
@@ -1061,7 +1149,8 @@ func GetStaticHandler(c echo.Context) error {
 	}
 
 	if strings.Contains(c.Request().URL.String(), ".xml") {
-		body = replaceHostname(bot, body)
+		//body = replaceHostname(bot, body)
+		body = replaceHostnameWithRegxp(bot, body, c.Request())
 		return c.Blob(http.StatusOK, "application/xml", body)
 	}
 
@@ -1085,7 +1174,9 @@ func GetFromGameHandler(c echo.Context) error {
 		vals = c.QueryParams()
 	}
 	pageHTML, _ := bot.GetPageContent(vals)
-	pageHTML = replaceHostname(bot, pageHTML)
+	//pageHTML = replaceHostname(bot, pageHTML)
+	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
+	pageHTML = removeCookiesBanner(pageHTML)
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
@@ -1098,7 +1189,9 @@ func PostToGameHandler(c echo.Context) error {
 	}
 	payload, _ := c.FormParams()
 	pageHTML, _ := bot.PostPageContent(vals, payload)
-	pageHTML = replaceHostname(bot, pageHTML)
+	//pageHTML = replaceHostname(bot, pageHTML)
+	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
+	pageHTML = removeCookiesBanner(pageHTML)
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
@@ -1453,4 +1546,53 @@ func GetPublicIPHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(ip))
+}
+
+func removeCookiesBanner(pageHTML []byte) []byte {
+	regex := `<script[^>]*id="cookiebanner"[^>]*>[\s\S]*?</script>`
+	re := regexp.MustCompile(regex)
+	return re.ReplaceAll(pageHTML, []byte(""))
+}
+
+func replaceHostnameWithRegxp(bot *OGame, pageHTML []byte, r *http.Request) []byte {
+	requestHostname := "http://" + r.Host
+	if r.TLS != nil {
+		requestHostname = "https://" + r.Host
+	}
+	regexes := []string{
+		//`https://s\d{1,3}-[a-z]{2}\.ogame\.gameforge\.com`,
+		`https://s\d+-[a-z]{2}\.ogame\.gameforge\.com`,
+		//`https?:\\/\\/s\d+-[a-z]{2}\.ogame\.gameforge\.com`,
+		`https:\\/\\/s\d+-[a-z]{2}\.ogame\.gameforge\.com`,
+		`https:\\\\\\\/\\\\\\\/s\d+-[a-z]{2}\.ogame\.gameforge\.com`,
+	}
+	for idx, regex := range regexes {
+		replaceStr := requestHostname
+		if bot.apiNewHostname != "" {
+			replaceStr = bot.apiNewHostname
+		}
+
+		if idx > 0 {
+			replaceStr = strings.ReplaceAll(replaceStr, `/`, `\/`)
+			if idx > 1 {
+				replaceStr = strings.ReplaceAll(replaceStr, `/`, `\\\/`)
+			}
+		}
+
+		pageHTML = regexp.MustCompile(regex).ReplaceAll(pageHTML, []byte(replaceStr))
+	}
+	return pageHTML
+}
+
+func replaceHostnamex(bot *OGame, html []byte) []byte {
+	serverURLBytes := []byte(bot.serverURL)
+	apiNewHostnameBytes := []byte(bot.apiNewHostname)
+	escapedServerURL := bytes.Replace(serverURLBytes, []byte("/"), []byte(`\/`), -1)
+	doubleEscapedServerURL := bytes.Replace(serverURLBytes, []byte("/"), []byte("\\\\\\/"), -1)
+	escapedAPINewHostname := bytes.Replace(apiNewHostnameBytes, []byte("/"), []byte(`\/`), -1)
+	doubleEscapedAPINewHostname := bytes.Replace(apiNewHostnameBytes, []byte("/"), []byte("\\\\\\/"), -1)
+	html = bytes.Replace(html, serverURLBytes, apiNewHostnameBytes, -1)
+	html = bytes.Replace(html, escapedServerURL, escapedAPINewHostname, -1)
+	html = bytes.Replace(html, doubleEscapedServerURL, doubleEscapedAPINewHostname, -1)
+	return html
 }

@@ -2,10 +2,11 @@ package wrapper
 
 import (
 	"crypto/tls"
-	"github.com/alaingilbert/ogame/pkg/device"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/alaingilbert/ogame/pkg/device"
 
 	"github.com/alaingilbert/ogame/pkg/extractor"
 	"github.com/alaingilbert/ogame/pkg/httpclient"
@@ -93,6 +94,7 @@ type Prioritizable interface {
 	HeadersForPage(url string) (http.Header, error)
 	Highscore(category, typ, page int64) (ogame.Highscore, error)
 	IsUnderAttack() (bool, error)
+	IsUnderAttackByID(CelestialID ogame.CelestialID) (bool, error)
 	Login() error
 	LoginWithBearerToken(token string) (bool, error)
 	LoginWithExistingCookies() (bool, error)
@@ -134,6 +136,7 @@ type Prioritizable interface {
 	GetShips(ogame.CelestialID, ...Option) (ogame.ShipsInfos, error)
 	GetTechs(celestialID ogame.CelestialID) (ogame.ResourcesBuildings, ogame.Facilities, ogame.ShipsInfos, ogame.DefensesInfos, ogame.Researches, ogame.LfBuildings, error)
 	SendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifiable, speed ogame.Speed, where ogame.Coordinate, mission ogame.MissionID, resources ogame.Resources, holdingTime, unionID int64) (ogame.Fleet, error)
+	SendDiscovery(celestialID ogame.CelestialID, where ogame.Coordinate) (bool, error)
 	TearDown(celestialID ogame.CelestialID, id ogame.ID) error
 	TechnologyDetails(celestialID ogame.CelestialID, id ogame.ID) (ogame.TechnologyDetails, error)
 	SendDiscoveryFleet(celestialID ogame.CelestialID, coord ogame.Coordinate) error
@@ -208,6 +211,7 @@ type Wrapper interface {
 	IsPioneers() bool
 	IsV7() bool
 	IsV9() bool
+	IsV10() bool
 	IsVacationModeEnabled() bool
 	Location() *time.Location
 	OnStateChange(clb func(locked bool, actor string))

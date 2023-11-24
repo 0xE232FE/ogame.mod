@@ -5,8 +5,10 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/alaingilbert/ogame/pkg/device"
+	"github.com/alaingilbert/ogame/pkg/tlsclientconfig"
 	"github.com/alaingilbert/ogame/pkg/wrapper"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -50,6 +52,72 @@ func main() {
 			Value:   "en",
 			Aliases: []string{"l"},
 			EnvVars: []string{"OGAMED_LANGUAGE"},
+		},
+		&cli.StringFlag{
+			Name:    "device-name",
+			Usage:   "Set the Device Name",
+			Value:   "device_name",
+			EnvVars: []string{"OGAMED_DEVICENAME"},
+		},
+		&cli.StringFlag{
+			Name:    "device-system",
+			Usage:   `Set the Device System (Android, Windows, "MacOSX", Linux, iOS)`,
+			Value:   "windows",
+			EnvVars: []string{"OGAMED_DEVICESYSTEM"},
+		},
+		&cli.StringFlag{
+			Name:    "device-browser",
+			Usage:   "Set the Device Browser (Chrome, Opera, Safari, Edge, Firefox)",
+			Value:   "Chrome",
+			EnvVars: []string{"OGAMED_DEVICEBROWSER"},
+		},
+		&cli.IntFlag{
+			Name:    "device-memory",
+			Usage:   "Set the Device Memory",
+			Value:   8,
+			EnvVars: []string{"OGAMED_DEVICEMEMORY"},
+		},
+		&cli.IntFlag{
+			Name:    "device-concurrency",
+			Usage:   "Set the Device Concurrency",
+			Value:   16,
+			EnvVars: []string{"OGAMED_DEVICECONCURRENCY"},
+		},
+		&cli.IntFlag{
+			Name:    "device-color",
+			Usage:   "Set the Device Color depth",
+			Value:   24,
+			EnvVars: []string{"OGAMED_DEVICECOLOR"},
+		},
+		&cli.IntFlag{
+			Name:    "device-width",
+			Usage:   "Set the Device Width",
+			Value:   1900,
+			EnvVars: []string{"OGAMED_DEVICEWIDTH"},
+		},
+		&cli.IntFlag{
+			Name:    "device-height",
+			Usage:   "Set the Device Height",
+			Value:   900,
+			EnvVars: []string{"OGAMED_DEVICHEIGHT"},
+		},
+		&cli.StringFlag{
+			Name:    "device-timezone",
+			Usage:   "Set the Device Timezone",
+			Value:   "America/Los_Angeles",
+			EnvVars: []string{"OGAMED_DEVICETIMEZONE"},
+		},
+		&cli.StringFlag{
+			Name:    "device-lang",
+			Usage:   "Set the Device Language",
+			Value:   "en-US,en",
+			EnvVars: []string{"OGAMED_DEVICELANG"},
+		},
+		&cli.StringFlag{
+			Name:    "device-user-agent",
+			Usage:   "Set the Device User-Agent",
+			Value:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+			EnvVars: []string{"OGAMED_DEVICEUSERAGENT"},
 		},
 		&cli.StringFlag{
 			Name:    "host",
@@ -108,7 +176,7 @@ func main() {
 		&cli.StringFlag{
 			Name:    "api-new-hostname",
 			Usage:   "New OGame Hostname eg: https://someuniverse.example.com",
-			Value:   "http://127.0.0.1:8080",
+			Value:   "",
 			EnvVars: []string{"OGAMED_NEW_HOSTNAME"},
 		},
 		&cli.StringFlag{
@@ -152,11 +220,12 @@ func main() {
 			Usage:   "Ninja API key",
 			Value:   "",
 			EnvVars: []string{"NJA_API_KEY"},
-		}, &cli.StringFlag{
-			Name:    "device-name",
-			Usage:   "Set the Device Name",
-			Value:   "device_name",
-			EnvVars: []string{"OGAMED_DEVICENAME"},
+		},
+		// cookies-filename DEPRECATED Only for compatibility TBot this parameter have to be removed soon!
+		&cli.StringFlag{
+			Name:    "cookies-filename",
+			Usage:   "[DEPRECATED] Path to Cookie File",
+			EnvVars: []string{"OGAMED_COOKIEFILENAME"},
 		},
 	}
 	app.Action = start
@@ -188,22 +257,70 @@ func start(c *cli.Context) error {
 	corsEnabled := c.Bool("cors-enabled")
 	njaApiKey := c.String("nja-api-key")
 	deviceName := c.String("device-name")
+	deviceSystem := c.String("device-system")
+	deviceBrowser := c.String("device-browser")
+	deviceMemory := c.Int("device-memory")
+	deviceConcurrency := c.Int("device-concurrency")
+	deviceColor := c.Int("device-color")
+	deviceWidth := c.Int("device-width")
+	deviceHeight := c.Int("device-height")
+	deviceTimezone := c.String("device-timezone")
+	deviceLang := c.String("device-lang")
+	deviceUserAgent := c.String("device-user-agent")
+
+	deviceSystem = strings.ToLower(deviceSystem)
+	var deviceSystemParam device.Os
+	switch deviceSystem {
+	case "android":
+		deviceSystemParam = device.Android
+	case "windows":
+		deviceSystemParam = device.Windows
+	case "macosx":
+		deviceSystemParam = device.MacOSX
+	case "linux":
+		deviceSystemParam = device.Linux
+	case "ios":
+		deviceSystemParam = device.Ios
+	default:
+		deviceSystemParam = device.Windows
+	}
+
+	deviceBrowser = strings.ToLower(deviceBrowser)
+	var deviceBrowserParam device.Browser
+	switch deviceBrowser {
+	case "chrome":
+		deviceBrowserParam = device.Chrome
+	case "opera":
+		deviceBrowserParam = device.Opera
+	case "safari":
+		deviceBrowserParam = device.Safari
+	case "edge":
+		deviceBrowserParam = device.Edge
+	case "firefox":
+		deviceBrowserParam = device.Firefox
+	default:
+		deviceBrowserParam = device.Chrome
+	}
+
 	// TODO: put device config in flags & env variables
 	deviceInst, err := device.NewBuilder(deviceName).
-		SetOsName(device.Windows).
-		SetBrowserName(device.Chrome).
-		SetMemory(8).
-		SetHardwareConcurrency(16).
-		ScreenColorDepth(24).
-		SetScreenWidth(1900).
-		SetScreenHeight(1080).
-		SetTimezone("Europe/Berlin").
-		SetLanguages("en-US,en").
+		SetOsName(deviceSystemParam).
+		SetBrowserName(deviceBrowserParam).
+		SetMemory(deviceMemory).
+		SetHardwareConcurrency(deviceConcurrency).
+		ScreenColorDepth(deviceColor).
+		SetScreenWidth(deviceWidth).
+		SetScreenHeight(deviceHeight).
+		SetTimezone(deviceTimezone).
+		SetLanguages(deviceLang).
+		SetUserAgent(deviceUserAgent).
 		Build()
 	if err != nil {
 		panic(err)
 	}
 	deviceInst.GetBlackbox()
+
+	tlsclientconfig.AddRoundTripper(deviceInst.GetClient().Transport)
 
 	params := wrapper.Params{
 		Device:         deviceInst,
@@ -313,8 +430,10 @@ func start(c *cli.Context) error {
 	e.GET("/bot/celestials/:celestialID/items", wrapper.GetCelestialItemsHandler)
 	e.GET("/bot/celestials/:celestialID/items/:itemRef/activate", wrapper.ActivateCelestialItemHandler)
 	e.GET("/bot/celestials/:celestialID/techs", wrapper.TechsHandler)
+	e.GET("/bot/celestials/:celestialID/abandon", wrapper.CelestialAbandonHandler)
 	e.GET("/bot/planets", wrapper.GetPlanetsHandler)
 	e.GET("/bot/planets/:planetID", wrapper.GetPlanetHandler)
+	e.GET("/bot/planets/:planetID/is-under-attack", wrapper.IsUnderAttackByIDHandler)
 	e.GET("/bot/planets/:galaxy/:system/:position", wrapper.GetPlanetByCoordHandler)
 	e.GET("/bot/planets/:planetID/resources-details", wrapper.GetResourcesDetailsHandler)
 	e.GET("/bot/planets/:planetID/resource-settings", wrapper.GetResourceSettingsHandler)
@@ -339,6 +458,7 @@ func start(c *cli.Context) error {
 	e.POST("/bot/planets/:planetID/cancel-research", wrapper.CancelResearchHandler)
 	e.GET("/bot/planets/:planetID/resources", wrapper.GetResourcesHandler)
 	e.POST("/bot/planets/:planetID/send-fleet", wrapper.SendFleetHandler)
+	e.POST("/bot/planets/:planetID/send-discovery", wrapper.SendDiscoveryHandler)
 	e.POST("/bot/planets/:planetID/send-ipm", wrapper.SendIPMHandler)
 	e.GET("/bot/moons/:moonID/phalanx/:galaxy/:system/:position", wrapper.PhalanxHandler)
 	e.POST("/bot/moons/:moonID/jump-gate", wrapper.JumpGateHandler)
@@ -367,9 +487,9 @@ func start(c *cli.Context) error {
 	e.HEAD("/api/*", wrapper.GetStaticHEADHandler) // AntiGame uses this to check if the cached XML files need to be refreshed
 
 	if enableTLS {
-		log.Println("Enable TLS Support")
+		log.Println("Enable TLS Support running encrypted HTTPS Server")
 		return e.StartTLS(host+":"+strconv.Itoa(port), tlsCertFile, tlsKeyFile)
 	}
-	log.Println("Disable TLS Support")
+	log.Println("Disable TLS Support running unencrypted HTTP Server")
 	return e.Start(host + ":" + strconv.Itoa(port))
 }

@@ -9,14 +9,11 @@ type BaseShip struct {
 }
 
 // GetCargoCapacity returns ship cargo capacity
-func (b BaseShip) GetCargoCapacity(techs IResearches, probeRaids, isCollector, isPioneers bool) int64 {
+func (b BaseShip) GetCargoCapacity(techs IResearches, probeRaids, isCollector bool, multiplier float64) int64 {
 	if b.GetID() == EspionageProbeID && !probeRaids {
 		return 0
 	}
-	hyperspaceBonus := 0.05
-	if isPioneers {
-		hyperspaceBonus = 0.02
-	}
+	hyperspaceBonus := multiplier / 100
 	cargo := b.BaseCargoCapacity + int64(float64(b.BaseCargoCapacity*techs.GetHyperspaceTechnology())*hyperspaceBonus)
 	if isCollector && (b.ID == SmallCargoID || b.ID == LargeCargoID) {
 		cargo += int64(float64(b.BaseCargoCapacity) * 0.25)

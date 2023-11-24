@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	v10 "github.com/alaingilbert/ogame/pkg/extractor/v10"
+	v11 "github.com/alaingilbert/ogame/pkg/extractor/v11"
 	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
 	v7 "github.com/alaingilbert/ogame/pkg/extractor/v7"
 	v9 "github.com/alaingilbert/ogame/pkg/extractor/v9"
@@ -542,3 +544,5 @@ type Extractor interface {
 var _ Extractor = (*v6.Extractor)(nil)
 var _ Extractor = (*v7.Extractor)(nil)
 var _ Extractor = (*v9.Extractor)(nil)
+var _ Extractor = (*v10.Extractor)(nil)
+var _ Extractor = (*v11.Extractor)(nil)

@@ -131,6 +131,19 @@ func extractEmpire(pageHTML []byte) ([]ogame.EmpireCelestial, error) {
 			resourcesDetails.Population.Available = int64(utils.DoCastF64(planet["production"].(map[string]any)["resources"].(map[string]any)["5"]))
 		}
 
+		// if reflect.TypeOf(planet["production"].(map[string]any)["storage"]) == reflect.TypeOf([]any{}) {
+		// 	resourcesDetails.Metal.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["hourly"].([]any)[0]))
+		// 	resourcesDetails.Crystal.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["hourly"].([]any)[1]))
+		// 	resourcesDetails.Deuterium.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["hourly"].([]any)[2]))
+		// 	//resourcesDetails.Population.LivingSpace = int64(utils.DoCastF64(planet["production"].(map[string]any)["hourly"].([]any)[3]))
+		// 	//resourcesDetails.Food.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["hourly"].([]any)[4]))
+		// } else {
+		// 	resourcesDetails.Metal.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["storage"].(map[string]any)["0"]))
+		// 	resourcesDetails.Crystal.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["storage"].(map[string]any)["1"]))
+		// 	resourcesDetails.Deuterium.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["storage"].(map[string]any)["2"]))
+		// 	resourcesDetails.Population.LivingSpace = int64(utils.DoCastF64(planet["production"].(map[string]any)["storage"].(map[string]any)["5"]))
+		// 	resourcesDetails.Food.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["storage"].(map[string]any)["6"]))
+		// }
 		resourcesDetails.Metal.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["storage"].(map[string]any)["0"]))
 		resourcesDetails.Crystal.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["storage"].(map[string]any)["1"]))
 		resourcesDetails.Deuterium.StorageCapacity = int64(utils.DoCastF64(planet["production"].(map[string]any)["storage"].(map[string]any)["2"]))
@@ -246,10 +259,12 @@ func extractEmpire(pageHTML []byte) ([]ogame.EmpireCelestial, error) {
 
 func extractOverviewProductionFromDoc(doc *goquery.Document, lifeformEnabled bool) ([]ogame.Quantifiable, error) {
 	res := make([]ogame.Quantifiable, 0)
-	active := doc.Find("table.construction").Eq(2)
-	if lifeformEnabled {
-		active = doc.Find("table.construction").Eq(4)
-	}
+
+	active := doc.Find("div#productionboxshipyardcomponent table.construction")
+	//active := doc.Find("table.construction").Eq(2)
+	// if lifeformEnabled {
+	// 	active = doc.Find("table.construction").Eq(4)
+	// }
 	href, _ := active.Find("td a").Attr("href")
 	m := regexp.MustCompile(`openTech=(\d+)`).FindStringSubmatch(href)
 	if len(m) == 0 {
@@ -652,7 +667,7 @@ func extractLfBuildingsFromDoc(doc *goquery.Document) (ogame.LfBuildings, error)
 		res.CrystalRefinery = GetNbr(doc, "lifeformTech12109")
 		res.DeuteriumSynthesiser = GetNbr(doc, "lifeformTech12110")
 		res.MineralResearchCentre = GetNbr(doc, "lifeformTech12111")
-		res.MetalRecyclingPlant = GetNbr(doc, "lifeformTech12112")
+		res.AdvancedRecyclingPlant = GetNbr(doc, "lifeformTech12112")
 
 	} else if doc.Find("#lifeform a div").HasClass("lifeform3") {
 		res.LifeformType = ogame.Mechas

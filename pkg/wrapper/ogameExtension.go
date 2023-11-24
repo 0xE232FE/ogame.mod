@@ -214,7 +214,7 @@ func (b *OGame) ninjaSendFleet(celestialID ogame.CelestialID, ships []ogame.Quan
 		}
 	}
 
-	cargo := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), b.server.Settings.EspionageProbeRaids == 1, b.isCollector(), b.IsPioneers())
+	cargo := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), b.server.Settings.EspionageProbeRaids == 1, b.isCollector(), float64(b.serverData.CargoHyperspaceTechMultiplier))
 	newResources := ogame.Resources{}
 	if resources.Total() > cargo {
 		newResources.Deuterium = int64(math.Min(float64(resources.Deuterium), float64(cargo)))
@@ -488,7 +488,7 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 		}
 	}
 
-	fuelCapacity := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(ogame.Researches{}, true, false, false)
+	fuelCapacity := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(ogame.Researches{}, true, false, float64(b.serverData.CargoHyperspaceTechMultiplier))
 
 	_, fuel := CalcFlightTime2(
 		b.GetCachedCelestialByID(celestialID).GetCoordinate(), where,
@@ -590,7 +590,7 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 		return ogame.Fleet{}, errors.New("target is not ok")
 	}
 
-	cargo := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(techs, b.server.Settings.EspionageProbeRaids == 1, b.isCollector(), b.IsPioneers())
+	cargo := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(techs, b.server.Settings.EspionageProbeRaids == 1, b.isCollector(), float64(b.serverData.CargoHyperspaceTechMultiplier))
 	newResources := ogame.Resources{}
 	if resources.Total() > cargo {
 		newResources.Deuterium = int64(math.Min(float64(resources.Deuterium), float64(cargo)))
@@ -1134,11 +1134,11 @@ func (b *OGame) SelectCharacterClass(c ogame.CharacterClass) error {
 func (bot *OGame) CalcCargo(total int64) (sc, lc, rc, pf, ds int64) {
 	research, _ := bot.GetResearch()
 
-	lc = int64(math.Ceil(float64(total) / float64(ogame.LargeCargo.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), bot.IsPioneers()))))
-	sc = int64(math.Ceil(float64(total) / float64(ogame.SmallCargo.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), bot.IsPioneers()))))
-	rc = int64(math.Ceil(float64(total) / float64(ogame.Recycler.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), bot.IsPioneers()))))
-	pf = int64(math.Ceil(float64(total) / float64(ogame.Pathfinder.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), bot.IsPioneers()))))
-	ds = int64(math.Ceil(float64(total) / float64(ogame.Deathstar.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), bot.IsPioneers()))))
+	lc = int64(math.Ceil(float64(total) / float64(ogame.LargeCargo.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), float64(bot.serverData.CargoHyperspaceTechMultiplier)))))
+	sc = int64(math.Ceil(float64(total) / float64(ogame.SmallCargo.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), float64(bot.serverData.CargoHyperspaceTechMultiplier)))))
+	rc = int64(math.Ceil(float64(total) / float64(ogame.Recycler.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), float64(bot.serverData.CargoHyperspaceTechMultiplier)))))
+	pf = int64(math.Ceil(float64(total) / float64(ogame.Pathfinder.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), float64(bot.serverData.CargoHyperspaceTechMultiplier)))))
+	ds = int64(math.Ceil(float64(total) / float64(ogame.Deathstar.GetCargoCapacity(research, bot.GetServerData().ProbeCargo != 0, bot.CharacterClass().IsCollector(), float64(bot.serverData.CargoHyperspaceTechMultiplier)))))
 	return
 }
 

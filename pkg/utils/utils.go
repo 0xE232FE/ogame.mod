@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"compress/gzip"
-	"github.com/PuerkitoBio/goquery"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 // ParseInt ...
@@ -201,4 +202,22 @@ func RandFloat(min, max float64) float64 {
 		min, max = max, min
 	}
 	return rand.Float64()*(max-min) + min
+}
+
+func AbsInt64(x int64) int64 {
+	return AbsDiffInt64(x, 0)
+}
+
+func AbsDiffInt64(x, y int64) int64 {
+	if x < y {
+		return y - x
+	}
+	return x - y
+}
+
+func AbsDiffUint64(x, y uint64) uint64 {
+	if x < y {
+		return y - x
+	}
+	return x - y
 }
