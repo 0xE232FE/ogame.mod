@@ -59,10 +59,17 @@ type Builder struct {
 	offlineAudioCtx     float64
 	canvas2DInfo        int
 	client              *httpclient.Client
+	persistor           Persistor
+}
+
+type Persistor interface {
+	Load() (*JsFingerprint, error)
+	Save(*JsFingerprint) error
 }
 
 type Device struct {
-	Builder
+	client    *httpclient.Client
+	persistor Persistor
 }
 
 func (d *Device) GetClient() *httpclient.Client {
@@ -73,11 +80,38 @@ func (d *Device) SetClient(client *httpclient.Client) {
 	d.client = client
 }
 
+// WithClient allows to use a temporary http client for a specific call.
+func (d *Device) WithClient(tmpClient *http.Client, clb func()) {
+	_ = d.WithClientE(tmpClient, func() error {
+		clb()
+		return nil
+	})
+}
+
+func (d *Device) WithClientE(tmpClient *http.Client, clb func() error) error {
+	oldClient := d.client.Client
+	defer func() { d.client.Client = oldClient }()
+	d.client.Client = tmpClient
+	return clb()
+}
+
+// WithClientFn allow to change the http client until the returned function is called.
+func (d *Device) WithClientFn(tmpClient *http.Client) (restoreClientFn func()) {
+	oldClient := d.client.Client
+	d.client.Client = tmpClient
+	return func() { d.client.Client = oldClient }
+}
+
 // NewBuilder creates a new virtual device.
 // If the device already exists in ~/.ogame/devices/<name> it will be loaded from there,
 // otherwise will be created when calling Build.
 func NewBuilder(name string) *Builder {
 	return &Builder{name: name}
+}
+
+func (d *Builder) SetPersistor(persistor Persistor) *Builder {
+	d.persistor = persistor
+	return d
 }
 
 func (d *Builder) SetOsName(osName Os) *Builder {
@@ -168,7 +202,38 @@ func DefaultStoragePath() string {
 	return filepath.Join(home, ".ogame", "storage")
 }
 
-func (d *Builder) Build() (*Device, error) {
+// FilePersistor default persistor for the javascript fingerprint
+// save/load the fingerprint from ~/.ogame/storage/<device_name>/fingerprint
+type FilePersistor struct {
+	deviceStorageDir string
+}
+
+func (f FilePersistor) Load() (*JsFingerprint, error) {
+	fingerprintFilePath := filepath.Join(f.deviceStorageDir, "fingerprint")
+	diskFpBy, err := os.ReadFile(fingerprintFilePath)
+	if err != nil {
+		return nil, err
+	}
+	fingerprint, err := ParseBlackbox(string(diskFpBy))
+	if err != nil {
+		return nil, err
+	}
+	return fingerprint, nil
+}
+
+func (f FilePersistor) Save(fprt *JsFingerprint) error {
+	fingerprintFilePath := filepath.Join(f.deviceStorageDir, "fingerprint")
+	by, err := json.Marshal(fprt)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(fingerprintFilePath, by, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *Builder) newFingerprint() (*JsFingerprint, error) {
 	if d.timezone == "" {
 		return nil, errors.New("timezone must be specified")
 	}
@@ -253,9 +318,70 @@ func (d *Builder) Build() (*Device, error) {
 		}
 	}
 
+	fprt := &JsFingerprint{
+		ConstantVersion:       9,
+		UserAgent:             d.userAgent,
+		BrowserName:           string(d.browserName),
+		BrowserEngineName:     d.browserEngineName,
+		NavigatorVendor:       d.navigatorVendor,
+		WebglInfo:             d.webglInfo,
+		XVecB64:               base64.StdEncoding.EncodeToString([]byte(GenNewXVec())),
+		XGame:                 Get27RandChars(3),
+		Timezone:              d.timezone,
+		OsName:                string(d.osName),
+		Version:               d.osVersion,
+		Languages:             d.languages,
+		DeviceMemory:          d.memory,
+		HardwareConcurrency:   d.hardwareConcurrency,
+		ScreenWidth:           d.screenWidth,
+		ScreenHeight:          d.screenHeight,
+		ScreenColorDepth:      d.screenColorDepth,
+		OfflineAudioCtx:       d.offlineAudioCtx,
+		Canvas2DInfo:          d.canvas2DInfo,
+		DateIso:               time.Now().UTC().Format(javascriptISOString),
+		NavigatorDoNotTrack:   false,
+		LocalStorageEnabled:   true,
+		SessionStorageEnabled: true,
+		VideoHash:             randFakeHash(),
+		AudioCtxHash:          randFakeHash(),
+		AudioHash:             randFakeHash(),
+		FontsHash:             randFakeHash(),
+		PluginsHash:           randFakeHash(),
+		MediaDevicesHash:      randFakeHash(),
+		PermissionsStatesHash: randFakeHash(),
+		WebglRenderHash:       randFakeHash(),
+		//Game1DateHeader:       game1DateHeader,
+		//CalcDeltaMs:           elapsed,
+	}
+	return fprt, nil
+}
+
+func (d *Builder) Build() (*Device, error) {
+	defaultStoragePath := DefaultStoragePath()
+	deviceStorageDir := filepath.Join(defaultStoragePath, d.name)
+	if err := os.MkdirAll(deviceStorageDir, 0755); err != nil {
+		return nil, err
+	}
+
+	if d.persistor == nil {
+		d.persistor = &FilePersistor{deviceStorageDir: deviceStorageDir}
+	}
+
+	fprt, err := d.persistor.Load()
+	if err != nil {
+		fprt, err = d.newFingerprint()
+		if err != nil {
+			return nil, err
+		}
+		if err := d.persistor.Save(fprt); err != nil {
+			return nil, err
+		}
+	}
+	d.userAgent = fprt.UserAgent
+
 	if d.client == nil {
 		jar, err := cookiejar.New(&cookiejar.Options{
-			Filename:              filepath.Join(DefaultStoragePath(), d.name, "cookies"),
+			Filename:              filepath.Join(defaultStoragePath, d.name, "cookies"),
 			PersistSessionCookies: true,
 		})
 		if err != nil {
@@ -270,40 +396,42 @@ func (d *Builder) Build() (*Device, error) {
 			}
 		}
 
-		d.client = httpclient.NewClient()
+		d.client = httpclient.NewClient(d.userAgent)
 		d.client.Jar = jar
-		d.client.SetUserAgent(d.userAgent)
 	}
 
-	return &Device{Builder: *d}, nil
+	return &Device{
+		persistor: d.persistor,
+		client:    d.client,
+	}, nil
 }
 
 type JsFingerprint struct {
-	ConstantVersion     int
-	UserAgent           string
-	BrowserName         string
-	BrowserEngineName   string
-	NavigatorVendor     string
-	WebglInfo           string
-	XVecB64             string
-	XGame               string
-	Timezone            string
-	OsName              string
-	Version             string
-	Languages           string
-	DeviceMemory        int
-	HardwareConcurrency int
-	ScreenWidth         int
-	ScreenHeight        int
-	ScreenColorDepth    int
-	OfflineAudioCtx     float64
-	Canvas2DInfo        int
-	DateIso             string
-	Game1DateHeader     string
-	CalcDeltaMs         int64
-	NavigatorDoNotTrack bool
-	//LocalStorageEnabled   bool
-	//SessionStorageEnabled bool
+	ConstantVersion       int
+	UserAgent             string
+	BrowserName           string
+	BrowserEngineName     string
+	NavigatorVendor       string
+	WebglInfo             string
+	XVecB64               string
+	XGame                 string
+	Timezone              string
+	OsName                string
+	Version               string
+	Languages             string
+	DeviceMemory          int
+	HardwareConcurrency   int
+	ScreenWidth           int
+	ScreenHeight          int
+	ScreenColorDepth      int
+	OfflineAudioCtx       float64
+	Canvas2DInfo          int
+	DateIso               string
+	Game1DateHeader       string
+	CalcDeltaMs           int64
+	NavigatorDoNotTrack   bool
+	LocalStorageEnabled   bool
+	SessionStorageEnabled bool
 	VideoHash             string
 	AudioCtxHash          string
 	AudioHash             string
@@ -322,69 +450,27 @@ func (d *Device) GetBlackbox() (string, error) {
 		return "", err
 	}
 
-	xVec := GenNewXVec()
-	fprt := &JsFingerprint{
-		ConstantVersion:     9,
-		UserAgent:           d.userAgent,
-		BrowserName:         string(d.browserName),
-		BrowserEngineName:   d.browserEngineName,
-		NavigatorVendor:     d.navigatorVendor,
-		WebglInfo:           d.webglInfo,
-		XVecB64:             base64.StdEncoding.EncodeToString([]byte(xVec)),
-		XGame:               Get27RandChars(3),
-		Timezone:            d.timezone,
-		OsName:              string(d.osName),
-		Version:             d.osVersion,
-		Languages:           d.languages,
-		DeviceMemory:        d.memory,
-		HardwareConcurrency: d.hardwareConcurrency,
-		ScreenWidth:         d.screenWidth,
-		ScreenHeight:        d.screenHeight,
-		ScreenColorDepth:    d.screenColorDepth,
-		OfflineAudioCtx:     d.offlineAudioCtx,
-		Canvas2DInfo:        d.canvas2DInfo,
-		DateIso:             time.Now().UTC().Format(javascriptISOString),
-		Game1DateHeader:     game1DateHeader,
-		CalcDeltaMs:         elapsed,
-		NavigatorDoNotTrack: false,
-		//LocalStorageEnabled:   true,
-		//SessionStorageEnabled: true,
-		VideoHash:             randFakeHash(),
-		AudioCtxHash:          randFakeHash(),
-		AudioHash:             randFakeHash(),
-		FontsHash:             randFakeHash(),
-		PluginsHash:           randFakeHash(),
-		MediaDevicesHash:      randFakeHash(),
-		PermissionsStatesHash: randFakeHash(),
-		WebglRenderHash:       randFakeHash(),
-	}
-
-	deviceStorageDir := filepath.Join(DefaultStoragePath(), d.name)
-	if err := os.MkdirAll(deviceStorageDir, 0755); err != nil {
+	fprt, err := d.persistor.Load()
+	if err != nil {
 		return "", err
 	}
-	fingerprintFilePath := filepath.Join(deviceStorageDir, "fingerprint")
-
-	if diskFpBy, err := os.ReadFile(fingerprintFilePath); err == nil {
-		if fprt, err = ParseBlackbox(string(diskFpBy)); err == nil {
-			xVecBy, err := base64.StdEncoding.DecodeString(fprt.XVecB64)
-			xVec := string(xVecBy)
-			if err != nil {
-				xVec = GenNewXVec()
-			}
-			newXVec := rotateXVec(xVec)
-			fprt.XVecB64 = base64.StdEncoding.EncodeToString([]byte(newXVec))
-		}
+	xVecBy, err := base64.StdEncoding.DecodeString(fprt.XVecB64)
+	xVec := string(xVecBy)
+	if err != nil || xVec == "" {
+		xVec = GenNewXVec()
 	}
+	newXVec := rotateXVec(xVec)
+	fprt.XVecB64 = base64.StdEncoding.EncodeToString([]byte(newXVec))
 
 	fprt.Game1DateHeader = game1DateHeader
 	fprt.CalcDeltaMs = elapsed
 
-	by, err := json.Marshal(fprt)
-	if err != nil {
+	if err := d.persistor.Save(fprt); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(fingerprintFilePath, by, 0644); err != nil {
+
+	by, err := json.Marshal(fprt)
+	if err != nil {
 		return "", err
 	}
 
@@ -412,8 +498,10 @@ func (f *JsFingerprint) MarshalJSON() ([]byte, error) {
 	toEnc = append(toEnc, f.ScreenWidth)         // 'd-BEuCA': window.screen.availWidth,
 	toEnc = append(toEnc, f.ScreenHeight)        // 'aM02nQV5': window.screen.availHeight,
 	toEnc = append(toEnc, f.ScreenColorDepth)    // 'ZMk5rRU': window.screen.colorDepth,
-	//toEnc = append(toEnc, f.LocalStorageEnabled)   // 'bL8zohR5': Boolean(localStorage),
-	//toEnc = append(toEnc, f.SessionStorageEnabled) // 'c8Y6qRuA': Boolean(sessionStorage),
+	if f.ConstantVersion == 8 {
+		toEnc = append(toEnc, f.LocalStorageEnabled)   // 'bL8zohR5': Boolean(localStorage),
+		toEnc = append(toEnc, f.SessionStorageEnabled) // 'c8Y6qRuA': Boolean(sessionStorage),
+	}
 	toEnc = append(toEnc, f.VideoHash)             // 'dt9DqBc': produceDeterministicHash(getVideoPropsInfo()),
 	toEnc = append(toEnc, f.AudioHash)             // 'YdY6oxI': produceDeterministicHash(getAudioPropsInfo()),
 	toEnc = append(toEnc, f.MediaDevicesHash)      // 'bdI2nwA': produceDeterministicHash(promises[1]),
@@ -689,13 +777,14 @@ func (d *Builder) setRandomWebglInfo() {
 }
 
 func (d *Builder) setRandomUserAgent() {
+	userAgent := ""
 	if d.osName == MacOSX {
 		if d.browserName == Firefox {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/109.0",
 			})
 		} else if d.browserName == Safari {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15",
 				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15",
 				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15",
@@ -703,7 +792,7 @@ func (d *Builder) setRandomUserAgent() {
 				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
 			})
 		} else if d.browserName == Chrome {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
 				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 				"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
@@ -711,18 +800,18 @@ func (d *Builder) setRandomUserAgent() {
 		}
 	} else if d.osName == Windows {
 		if d.browserName == Opera {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 OPR/94.0.0.0",
 				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36 OPR/94.0.0.0 (Edition std-1)",
 			})
 		} else if d.browserName == Firefox {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0",
 				"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0",
 				"Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0",
 			})
 		} else if d.browserName == Chrome {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36",
 				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
 				"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
@@ -734,18 +823,18 @@ func (d *Builder) setRandomUserAgent() {
 		}
 	} else if d.osName == Linux {
 		if d.browserName == Chrome {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
 			})
 		} else if d.browserName == Firefox {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (X11; Linux armv7l; rv:91.0) Gecko/20100101 Firefox/91.0",
 				"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0",
 			})
 		}
 	} else if d.osName == Android {
 		if d.browserName == Chrome {
-			d.userAgent = utils.RandChoice([]string{
+			userAgent = utils.RandChoice([]string{
 				"Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Mobile Safari/537.36",
 				"Mozilla/5.0 (Linux; Android 13; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Mobile Safari/537.36",
 				"Mozilla/5.0 (Linux; Android 13; SM-S908E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Mobile Safari/537.36",
@@ -780,6 +869,7 @@ func (d *Builder) setRandomUserAgent() {
 			})
 		}
 	}
+	d.userAgent = userAgent
 }
 
 func (d *Builder) setRandomMemory() {
@@ -919,78 +1009,64 @@ var timezones = []string{"Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa",
 	"Pacific/Tongatapu", "Pacific/Truk", "Pacific/Wake", "Pacific/Wallis"}
 
 func EncryptBlackbox(raw string) string {
+	retardPseudoB64 := func(v []uint8) string {
+		extraPadding := 0
+		for len(v)%3 != 0 {
+			extraPadding++
+			v = append(v, 0)
+		}
+		chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
+		sb := make([]uint8, 0)
+		const mask = 0b11_1111
+		for i := 0; i < len(v); i += 3 {
+			first := uint32(v[i+0])
+			second := uint32(v[i+1])
+			third := uint32(v[i+2])
+			packed := first<<16 | second<<8 | third<<0
+			sb = append(sb, chars[(packed>>18)&mask], chars[(packed>>12)&mask], chars[(packed>>6)&mask], chars[(packed>>0)&mask])
+		}
+		return string(sb[:len(sb)-extraPadding])
+	}
 	escaped := url.QueryEscape(raw)
-	sb := strings.Builder{}
-	sb.Grow(len(escaped))
-
-	sb.WriteByte(escaped[0])
+	sb := make([]uint8, len(escaped))
+	sb[0] = escaped[0]
 	for i := 1; i < len(escaped); i++ {
-		sb.WriteByte(sb.String()[i-1] + escaped[i])
+		sb[i] = sb[i-1] + escaped[i]
 	}
-
-	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
-	const mask = 0b11_1111
-	extraPadding := 0
-	result := sb.String()
-	resultLength := len(result)
-
-	for resultLength%3 != 0 {
-		extraPadding++
-		result += "\x00"
-		resultLength++
-	}
-
-	output := make([]byte, 0, len(result)/3*4-extraPadding)
-
-	for i := 0; i < resultLength; i += 3 {
-		first := uint32(result[i])
-		second := uint32(result[i+1])
-		third := uint32(result[i+2])
-		packed := first<<16 | second<<8 | third<<0
-		output = append(output, chars[(packed>>18)&mask], chars[(packed>>12)&mask], chars[(packed>>6)&mask], chars[(packed>>0)&mask])
-	}
-
-	return string(output)
+	return retardPseudoB64(sb)
 }
 
 func DecryptBlackbox(encrypted string) (string, error) {
-	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
-	const mask = 0b1111_1111
-
-	lookup := make(map[byte]int)
-	for i, c := range chars {
-		lookup[byte(c)] = i
+	reverseRetardPseudoB64 := func(v string) []uint8 {
+		extraPadding := 0
+		for len(v)%4 != 0 {
+			v += "A"
+			extraPadding++
+		}
+		chars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_="
+		sb := make([]uint8, 0)
+		const mask = 0b1111_1111
+		for i := 0; i < len(v); i += 4 {
+			first := strings.IndexByte(chars, v[i+0])
+			second := strings.IndexByte(chars, v[i+1])
+			third := strings.IndexByte(chars, v[i+2])
+			fourth := strings.IndexByte(chars, v[i+3])
+			packed := first<<18 | second<<12 | third<<6 | fourth<<0
+			sb = append(sb, uint8(packed>>16&mask), uint8(packed>>8&mask), uint8(packed>>0&mask))
+		}
+		return sb[0 : len(sb)-extraPadding]
 	}
-
-	decoded, err := base64.URLEncoding.DecodeString(encrypted)
+	encrypted1 := reverseRetardPseudoB64(encrypted)
+	sb := make([]uint8, len(encrypted1))
+	for i := len(encrypted1) - 2; i >= 0; i-- {
+		sb[i+1] = encrypted1[i+1] - encrypted1[i]
+	}
+	sb[0] = encrypted1[0]
+	out, err := url.QueryUnescape(string(sb))
 	if err != nil {
 		return "", err
 	}
-
-	sb := make([]byte, len(decoded)/4*3)
-	extraPadding := len(decoded) % 4
-
-	for i := 0; i < len(decoded)-extraPadding; i += 4 {
-		first := lookup[decoded[i+0]]
-		second := lookup[decoded[i+1]]
-		third := lookup[decoded[i+2]]
-		fourth := lookup[decoded[i+3]]
-		packed := uint32(first<<18 | second<<12 | third<<6 | fourth<<0)
-		sb[i/4*3+0] = byte(packed >> 16 & mask)
-		sb[i/4*3+1] = byte(packed >> 8 & mask)
-		sb[i/4*3+2] = byte(packed >> 0 & mask)
-	}
-
-	for i := len(decoded) - 2; i >= 0; i-- {
-		sb[i+1] -= sb[i]
-	}
-
-	decodedString, err := url.QueryUnescape(string(sb))
-	if err != nil {
-		return "", err
-	}
-
-	return decodedString, nil
+	return out, nil
 }
 
 func ParseEncryptedBlackbox(encrypted string) (fingerprint *JsFingerprint, err error) {
@@ -1002,6 +1078,24 @@ func ParseEncryptedBlackbox(encrypted string) (fingerprint *JsFingerprint, err e
 }
 
 func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
+	dec := json.NewDecoder(strings.NewReader(decrypted))
+	var arr []any
+	if err := dec.Decode(&arr); err != nil {
+		return nil, err
+	}
+	constantVersion, ok := arr[0].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse ConstantVersion")
+	}
+	if constantVersion == 8 {
+		return ParseBlackboxV8(decrypted)
+	} else if constantVersion == 9 {
+		return ParseBlackboxV9(decrypted)
+	}
+	return nil, errors.New("unknown blackbox version")
+}
+
+func ParseBlackboxV8(decrypted string) (*JsFingerprint, error) {
 	fingerprint := &JsFingerprint{}
 	dec := json.NewDecoder(strings.NewReader(decrypted))
 	var arr []any
@@ -1012,61 +1106,209 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse ConstantVersion")
 	}
-	fingerprint.ConstantVersion = int(constantVersion)
-	fingerprint.UserAgent, ok = arr[29].(string)
+	fingerprint.Timezone, ok = arr[1].(string)
 	if !ok {
-		return nil, errors.New("failed to parse UserAgent")
+		return nil, errors.New("failed to parse Timezone")
 	}
-	fingerprint.BrowserName, ok = arr[5].(string)
+	fingerprint.NavigatorDoNotTrack, ok = arr[2].(bool)
 	if !ok {
-		return nil, errors.New("failed to parse BrowserName")
+		return nil, errors.New("failed to parse NavigatorDoNotTrack")
 	}
 	fingerprint.BrowserEngineName, ok = arr[3].(string)
 	if !ok {
 		return nil, errors.New("failed to parse BrowserEngineName")
 	}
-	fingerprint.NavigatorVendor, ok = arr[6].(string)
-	if !ok {
-		return nil, errors.New("failed to parse NavigatorVendor")
-	}
-	fingerprint.WebglInfo, ok = arr[11].(string)
-	if !ok {
-		return nil, errors.New("failed to parse WebglInfo")
-	}
-	fingerprint.XVecB64, ok = arr[28].(string)
-	if !ok {
-		return nil, errors.New("failed to parse XVecB64")
-	}
-	fingerprint.XGame, ok = arr[25].(string)
-	if !ok {
-		return nil, errors.New("failed to parse XGame")
-	}
-	fingerprint.Timezone, ok = arr[1].(string)
-	if !ok {
-		return nil, errors.New("failed to parse Timezone")
-	}
 	fingerprint.OsName, ok = arr[4].(string)
 	if !ok {
 		return nil, errors.New("failed to parse OsName")
 	}
-	fingerprint.Version, ok = arr[27].(string)
+	fingerprint.BrowserName, ok = arr[5].(string)
 	if !ok {
-		return nil, errors.New("failed to parse Version")
+		return nil, errors.New("failed to parse BrowserName")
 	}
-	fingerprint.Languages, ok = arr[9].(string)
+	fingerprint.NavigatorVendor, ok = arr[6].(string)
 	if !ok {
-		return nil, errors.New("failed to parse Languages")
+		return nil, errors.New("failed to parse NavigatorVendor")
 	}
 	deviceMemory, ok := arr[7].(float64)
 	if !ok {
 		return nil, errors.New("failed to parse DeviceMemory")
 	}
-	fingerprint.DeviceMemory = int(deviceMemory)
 	hardwareConcurrency, ok := arr[8].(float64)
 	if !ok {
 		return nil, errors.New("failed to parse DeviceMemory")
 	}
 	fingerprint.HardwareConcurrency = int(hardwareConcurrency)
+	fingerprint.Languages, ok = arr[9].(string)
+	if !ok {
+		return nil, errors.New("failed to parse Languages")
+	}
+	fingerprint.PluginsHash, ok = arr[10].(string)
+	if !ok {
+		return nil, errors.New("failed to parse PluginsHash")
+	}
+	fingerprint.WebglInfo, ok = arr[11].(string)
+	if !ok {
+		return nil, errors.New("failed to parse WebglInfo")
+	}
+	fingerprint.FontsHash, ok = arr[12].(string)
+	if !ok {
+		return nil, errors.New("failed to parse FontsHash")
+	}
+	fingerprint.AudioCtxHash, ok = arr[13].(string)
+	if !ok {
+		return nil, errors.New("failed to parse AudioCtxHash")
+	}
+	screenWidth, ok := arr[14].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse ScreenWidth")
+	}
+	fingerprint.ScreenWidth = int(screenWidth)
+	screenHeight, ok := arr[15].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse ScreenHeight")
+	}
+	fingerprint.ScreenHeight = int(screenHeight)
+	screenColorDepth, ok := arr[16].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse ScreenColorDepth")
+	}
+	fingerprint.LocalStorageEnabled, ok = arr[17].(bool)
+	if !ok {
+		return nil, errors.New("failed to parse LocalStorageEnabled")
+	}
+	fingerprint.SessionStorageEnabled, ok = arr[18].(bool)
+	if !ok {
+		return nil, errors.New("failed to parse SessionStorageEnabled")
+	}
+	fingerprint.ScreenColorDepth = int(screenColorDepth)
+	fingerprint.VideoHash, ok = arr[19].(string)
+	if !ok {
+		return nil, errors.New("failed to parse VideoHash")
+	}
+	fingerprint.AudioHash, ok = arr[20].(string)
+	if !ok {
+		return nil, errors.New("failed to parse AudioHash")
+	}
+	fingerprint.MediaDevicesHash, ok = arr[21].(string)
+	if !ok {
+		return nil, errors.New("failed to parse MediaDevicesHash")
+	}
+	fingerprint.PermissionsStatesHash, ok = arr[22].(string)
+	if !ok {
+		return nil, errors.New("failed to parse PermissionsStatesHash")
+	}
+	fingerprint.OfflineAudioCtx, ok = arr[23].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse OfflineAudioCtx")
+	}
+	fingerprint.WebglRenderHash, ok = arr[24].(string)
+	if !ok {
+		return nil, errors.New("failed to parse WebglRenderHash")
+	}
+	canvas2DInfo, ok := arr[25].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse Canvas2DInfo")
+	}
+	fingerprint.Canvas2DInfo = int(canvas2DInfo)
+	fingerprint.DateIso, ok = arr[26].(string)
+	if !ok {
+		return nil, errors.New("failed to parse DateIso")
+	}
+	fingerprint.XGame, ok = arr[27].(string)
+	if !ok {
+		return nil, errors.New("failed to parse XGame")
+	}
+	calcDeltaMs, ok := arr[28].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse CalcDeltaMs")
+	}
+	fingerprint.CalcDeltaMs = int64(calcDeltaMs)
+	fingerprint.Version, ok = arr[29].(string)
+	if !ok {
+		return nil, errors.New("failed to parse Version")
+	}
+	fingerprint.DeviceMemory = int(deviceMemory)
+	fingerprint.XVecB64, ok = arr[30].(string)
+	if !ok {
+		return nil, errors.New("failed to parse XVecB64")
+	}
+	fingerprint.ConstantVersion = int(constantVersion)
+	fingerprint.UserAgent, ok = arr[31].(string)
+	if !ok {
+		return nil, errors.New("failed to parse UserAgent")
+	}
+	fingerprint.Game1DateHeader, ok = arr[32].(string)
+	if !ok {
+		return nil, errors.New("failed to parse Game1DateHeader")
+	}
+	return fingerprint, nil
+}
+
+func ParseBlackboxV9(decrypted string) (*JsFingerprint, error) {
+	fingerprint := &JsFingerprint{}
+	dec := json.NewDecoder(strings.NewReader(decrypted))
+	var arr []any
+	if err := dec.Decode(&arr); err != nil {
+		return nil, err
+	}
+	constantVersion, ok := arr[0].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse ConstantVersion")
+	}
+	fingerprint.Timezone, ok = arr[1].(string)
+	if !ok {
+		return nil, errors.New("failed to parse Timezone")
+	}
+	fingerprint.NavigatorDoNotTrack, ok = arr[2].(bool)
+	if !ok {
+		return nil, errors.New("failed to parse NavigatorDoNotTrack")
+	}
+	fingerprint.BrowserEngineName, ok = arr[3].(string)
+	if !ok {
+		return nil, errors.New("failed to parse BrowserEngineName")
+	}
+	fingerprint.OsName, ok = arr[4].(string)
+	if !ok {
+		return nil, errors.New("failed to parse OsName")
+	}
+	fingerprint.BrowserName, ok = arr[5].(string)
+	if !ok {
+		return nil, errors.New("failed to parse BrowserName")
+	}
+	fingerprint.NavigatorVendor, ok = arr[6].(string)
+	if !ok {
+		return nil, errors.New("failed to parse NavigatorVendor")
+	}
+	deviceMemory, ok := arr[7].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse DeviceMemory")
+	}
+	hardwareConcurrency, ok := arr[8].(float64)
+	if !ok {
+		return nil, errors.New("failed to parse DeviceMemory")
+	}
+	fingerprint.HardwareConcurrency = int(hardwareConcurrency)
+	fingerprint.Languages, ok = arr[9].(string)
+	if !ok {
+		return nil, errors.New("failed to parse Languages")
+	}
+	fingerprint.PluginsHash, ok = arr[10].(string)
+	if !ok {
+		return nil, errors.New("failed to parse PluginsHash")
+	}
+	fingerprint.WebglInfo, ok = arr[11].(string)
+	if !ok {
+		return nil, errors.New("failed to parse WebglInfo")
+	}
+	fingerprint.FontsHash, ok = arr[12].(string)
+	if !ok {
+		return nil, errors.New("failed to parse FontsHash")
+	}
+	fingerprint.AudioCtxHash, ok = arr[13].(string)
+	if !ok {
+		return nil, errors.New("failed to parse AudioCtxHash")
+	}
 	screenWidth, ok := arr[14].(float64)
 	if !ok {
 		return nil, errors.New("failed to parse ScreenWidth")
@@ -1082,9 +1324,29 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 		return nil, errors.New("failed to parse ScreenColorDepth")
 	}
 	fingerprint.ScreenColorDepth = int(screenColorDepth)
+	fingerprint.VideoHash, ok = arr[17].(string)
+	if !ok {
+		return nil, errors.New("failed to parse VideoHash")
+	}
+	fingerprint.AudioHash, ok = arr[18].(string)
+	if !ok {
+		return nil, errors.New("failed to parse AudioHash")
+	}
+	fingerprint.MediaDevicesHash, ok = arr[19].(string)
+	if !ok {
+		return nil, errors.New("failed to parse MediaDevicesHash")
+	}
+	fingerprint.PermissionsStatesHash, ok = arr[20].(string)
+	if !ok {
+		return nil, errors.New("failed to parse PermissionsStatesHash")
+	}
 	fingerprint.OfflineAudioCtx, ok = arr[21].(float64)
 	if !ok {
 		return nil, errors.New("failed to parse OfflineAudioCtx")
+	}
+	fingerprint.WebglRenderHash, ok = arr[22].(string)
+	if !ok {
+		return nil, errors.New("failed to parse WebglRenderHash")
 	}
 	canvas2DInfo, ok := arr[23].(float64)
 	if !ok {
@@ -1095,62 +1357,32 @@ func ParseBlackbox(decrypted string) (*JsFingerprint, error) {
 	if !ok {
 		return nil, errors.New("failed to parse DateIso")
 	}
-	fingerprint.Game1DateHeader, ok = arr[30].(string)
+	fingerprint.XGame, ok = arr[25].(string)
 	if !ok {
-		return nil, errors.New("failed to parse Game1DateHeader")
+		return nil, errors.New("failed to parse XGame")
 	}
 	calcDeltaMs, ok := arr[26].(float64)
 	if !ok {
 		return nil, errors.New("failed to parse CalcDeltaMs")
 	}
 	fingerprint.CalcDeltaMs = int64(calcDeltaMs)
-	fingerprint.NavigatorDoNotTrack, ok = arr[2].(bool)
+	fingerprint.Version, ok = arr[27].(string)
 	if !ok {
-		return nil, errors.New("failed to parse NavigatorDoNotTrack")
+		return nil, errors.New("failed to parse Version")
 	}
-	// fingerprint.LocalStorageEnabled, ok = arr[17].(bool)
-	// if !ok {
-	// 	return nil, errors.New("failed to parse LocalStorageEnabled")
-	// }
-	// fingerprint.SessionStorageEnabled, ok = arr[18].(bool)
-	// if !ok {
-	// 	return nil, errors.New("failed to parse SessionStorageEnabled")
-	// }
-	fingerprint.VideoHash, ok = arr[17].(string)
+	fingerprint.DeviceMemory = int(deviceMemory)
+	fingerprint.XVecB64, ok = arr[28].(string)
 	if !ok {
-		return nil, errors.New("failed to parse VideoHash")
+		return nil, errors.New("failed to parse XVecB64")
 	}
-	fingerprint.AudioCtxHash, ok = arr[13].(string)
+	fingerprint.ConstantVersion = int(constantVersion)
+	fingerprint.UserAgent, ok = arr[29].(string)
 	if !ok {
-		return nil, errors.New("failed to parse AudioCtxHash")
+		return nil, errors.New("failed to parse UserAgent")
 	}
-	fingerprint.AudioHash, ok = arr[18].(string)
+	fingerprint.Game1DateHeader, ok = arr[30].(string)
 	if !ok {
-		return nil, errors.New("failed to parse AudioHash")
-	}
-	fingerprint.FontsHash, ok = arr[12].(string)
-	if !ok {
-		return nil, errors.New("failed to parse FontsHash")
-	}
-	fingerprint.PluginsHash, ok = arr[10].(string)
-	if !ok {
-		return nil, errors.New("failed to parse PluginsHash")
-	}
-	fingerprint.MediaDevicesHash, ok = arr[19].(string)
-	if !ok {
-		return nil, errors.New("failed to parse MediaDevicesHash")
-	}
-	fingerprint.PermissionsStatesHash, ok = arr[20].(string)
-	if !ok {
-		return nil, errors.New("failed to parse PermissionsStatesHash")
-	}
-	fingerprint.WebglRenderHash, ok = arr[22].(string)
-	if !ok {
-		return nil, errors.New("failed to parse WebglRenderHash")
+		return nil, errors.New("failed to parse Game1DateHeader")
 	}
 	return fingerprint, nil
-}
-
-func (d *Device) GetName() string {
-	return d.name
 }

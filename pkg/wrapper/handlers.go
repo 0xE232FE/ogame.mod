@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/alaingilbert/ogame/pkg/gameforge"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -63,13 +64,9 @@ func GetServerDataHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(bot.serverData))
 }
 
-// SetUserAgentHandler ...
-// curl 127.0.0.1:1234/bot/set-user-agent -d 'userAgent="New user agent"'
+// SetUserAgentHandler deprecated
 func SetUserAgentHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	userAgent := c.Request().PostFormValue("userAgent")
-	bot.SetUserAgent(userAgent)
-	return c.JSON(http.StatusOK, SuccessResp(nil))
+	return c.JSON(http.StatusOK, ErrorResp(http.StatusBadRequest, "deprecated"))
 }
 
 // ServerURLHandler ...
@@ -1177,6 +1174,7 @@ func GetFromGameHandler(c echo.Context) error {
 	//pageHTML = replaceHostname(bot, pageHTML)
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
 	pageHTML = removeCookiesBanner(pageHTML)
+	pageHTML = removeCookiesBanner(pageHTML)
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
@@ -1191,6 +1189,7 @@ func PostToGameHandler(c echo.Context) error {
 	pageHTML, _ := bot.PostPageContent(vals, payload)
 	//pageHTML = replaceHostname(bot, pageHTML)
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
+	pageHTML = removeCookiesBanner(pageHTML)
 	pageHTML = removeCookiesBanner(pageHTML)
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
@@ -1464,11 +1463,18 @@ func TechsHandler(c echo.Context) error {
 // GetCaptchaHandler ...
 func GetCaptchaHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
-
-	_, err := GFLogin(bot.device, bot.ctx, bot.lobby, bot.Username, bot.password, bot.otpSecret, "")
-	var captchaErr *CaptchaRequiredError
+	params := &gameforge.GfLoginParams{
+		Ctx:       bot.ctx,
+		Device:    bot.device,
+		Lobby:     bot.lobby,
+		Username:  bot.Username,
+		Password:  bot.password,
+		OtpSecret: bot.otpSecret,
+	}
+	_, err := gameforge.GFLogin(params)
+	var captchaErr *gameforge.CaptchaRequiredError
 	if errors.As(err, &captchaErr) {
-		questionRaw, iconsRaw, err := StartCaptchaChallenge(bot.GetClient(), bot.ctx, captchaErr.ChallengeID)
+		questionRaw, iconsRaw, err := gameforge.StartCaptchaChallenge(bot.GetClient(), bot.ctx, captchaErr.ChallengeID)
 		if err != nil {
 			return c.HTML(http.StatusOK, err.Error())
 		}
@@ -1496,7 +1502,7 @@ func GetCaptchaSolverHandler(c echo.Context) error {
 	challengeID := c.Request().PostFormValue("challenge_id")
 	answer := utils.DoParseI64(c.Request().PostFormValue("answer"))
 
-	if err := SolveChallenge(bot.GetClient(), bot.ctx, challengeID, answer); err != nil {
+	if err := gameforge.SolveChallenge(bot.GetClient(), bot.ctx, challengeID, answer); err != nil {
 		bot.error(err)
 	}
 
@@ -1518,10 +1524,18 @@ type CaptchaChallenge struct {
 // GetCaptchaChallengeHandler ...
 func GetCaptchaChallengeHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
-	_, err := GFLogin(bot.device, bot.ctx, bot.lobby, bot.Username, bot.password, bot.otpSecret, "")
-	var captchaErr *CaptchaRequiredError
+	params := &gameforge.GfLoginParams{
+		Ctx:       bot.ctx,
+		Device:    bot.device,
+		Lobby:     bot.lobby,
+		Username:  bot.Username,
+		Password:  bot.password,
+		OtpSecret: bot.otpSecret,
+	}
+	_, err := gameforge.GFLogin(params)
+	var captchaErr *gameforge.CaptchaRequiredError
 	if errors.As(err, &captchaErr) {
-		questionRaw, iconsRaw, err := StartCaptchaChallenge(bot.GetClient(), bot.ctx, captchaErr.ChallengeID)
+		questionRaw, iconsRaw, err := gameforge.StartCaptchaChallenge(bot.GetClient(), bot.ctx, captchaErr.ChallengeID)
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
 		}

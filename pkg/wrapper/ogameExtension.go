@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/alaingilbert/ogame/pkg/gameforge"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/taskRunner"
 	"github.com/alaingilbert/ogame/pkg/utils"
@@ -25,19 +26,19 @@ import (
 	"golang.org/x/net/html"
 )
 
-func (b *OGame) GetUserAccounts() ([]Account, error) {
-	return GetUserAccounts(b.device.GetClient(), b.ctx, b.lobby, b.GetBearerToken())
+func (b *OGame) GetUserAccounts() ([]gameforge.Account, error) {
+	return gameforge.GetUserAccounts(b.device.GetClient(), b.ctx, b.lobby, b.GetBearerToken())
 }
 
-func (b *OGame) GetServers() ([]Server, error) {
-	return GetServers(b.lobby, b.device.GetClient(), b.ctx)
+func (b *OGame) GetServers() ([]gameforge.Server, error) {
+	return gameforge.GetServers(b.lobby, b.device.GetClient(), b.ctx)
 }
 
 func (b *OGame) GetPassword() string {
 	return b.password
 }
 
-func (b *OGame) FindAccount(universe, lang string, playerID int64, accounts []Account, servers []Server) (Account, Server, error) {
+func (b *OGame) FindAccount(universe, lang string, playerID int64, accounts []gameforge.Account, servers []gameforge.Server) (gameforge.Account, gameforge.Server, error) {
 	return findAccount(universe, lang, playerID, accounts, servers)
 }
 
@@ -45,7 +46,7 @@ func (b *OGame) GetBearerToken() string {
 	if b.bearerToken == "" {
 		cookies := b.device.GetClient().Jar.(*cookiejar.Jar).AllCookies()
 		for _, c := range cookies {
-			if c.Name == TokenCookieName {
+			if c.Name == gameforge.TokenCookieName {
 				b.bearerToken = c.Value
 				break
 			}
@@ -878,8 +879,8 @@ type GiftServer struct {
 	Number   int64  `json:"number"`
 } //`json:"server"`
 
-func GetUserAccountsWithBearerToken(client *http.Client, lobby, token string) ([]Account, error) {
-	var userAccounts []Account
+func GetUserAccountsWithBearerToken(client *http.Client, lobby, token string) ([]gameforge.Account, error) {
+	var userAccounts []gameforge.Account
 	req, err := http.NewRequest("GET", "https://"+lobby+".ogame.gameforge.com/api/users/me/accounts", nil)
 	if err != nil {
 		return userAccounts, err
@@ -942,7 +943,7 @@ func CreateGiftCodeWithBearerToken(lobby, bearerToken string, client *http.Clien
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 409 {
-		gfChallengeID := resp.Header.Get(TokenCookieName) // c434aa65-a064-498f-9ca4-98054bab0db8;https://challenge.gameforge.com
+		gfChallengeID := resp.Header.Get(gameforge.TokenCookieName) // c434aa65-a064-498f-9ca4-98054bab0db8;https://challenge.gameforge.com
 		if gfChallengeID != "" {
 			parts := strings.Split(gfChallengeID, ";")
 			challengeID := parts[0]
@@ -1009,7 +1010,7 @@ func (b *OGame) CreateGiftCode() string {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 409 {
-		gfChallengeID := resp.Header.Get(TokenCookieName) // c434aa65-a064-498f-9ca4-98054bab0db8;https://challenge.gameforge.com
+		gfChallengeID := resp.Header.Get(gameforge.TokenCookieName) // c434aa65-a064-498f-9ca4-98054bab0db8;https://challenge.gameforge.com
 		if gfChallengeID != "" {
 			parts := strings.Split(gfChallengeID, ";")
 			challengeID := parts[0]

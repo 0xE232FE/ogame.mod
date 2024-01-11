@@ -2,7 +2,6 @@ package httpclient
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,8 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
 type IHttpClient interface {
@@ -35,8 +32,6 @@ type Client struct {
 	rpsStartTime    int64 // atomic
 	bytesDownloaded int64
 	bytesUploaded   int64
-	requestCounter  int64
-	Ratelimiter     *rate.Limiter
 }
 
 func (c *Client) BytesDownloaded() int64 {
@@ -51,21 +46,14 @@ func (c *Client) BytesUploaded() int64 {
 	return c.bytesUploaded
 }
 
-func (c *Client) Requests() int64 {
-	c.Lock()
-	defer c.Unlock()
-	return c.requestCounter
-}
-
 // NewClient ...
-func NewClient() *Client {
-	rl := rate.NewLimiter(rate.Every(0*time.Second), 6) // 60 request every 10 seconds
+func NewClient(userAgent string) *Client {
 	client := &Client{
 		Client: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout: 30 * time.Second,
 		},
-		Ratelimiter: rl,
-		maxRPS:      0,
+		maxRPS:    0,
+		userAgent: userAgent,
 	}
 
 	const delay = 1
@@ -88,15 +76,12 @@ func (c *Client) SetMaxRPS(maxRPS int32) {
 }
 
 func (c *Client) incrRPS() {
-	c.requestCounter++
 	newRPS := atomic.AddInt32(&c.rpsCounter, 1)
 	maxRPS := atomic.LoadInt32(&c.maxRPS)
 	if maxRPS > 0 && newRPS > maxRPS {
 		s := atomic.LoadInt64(&c.rpsStartTime) - time.Now().UnixNano()
-		//fmt.Printf("throttle %d\n", s)
+		// fmt.Printf("throttle %d\n", s)
 		time.Sleep(time.Duration(s))
-		// fmt.Printf("throttle %s %d\n", time.Second, c.requestCounter)
-		// time.Sleep(time.Duration(time.Second))
 	}
 }
 
@@ -131,11 +116,6 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 }
 
 func (c *Client) do(req *http.Request) (*http.Response, error) {
-	ctx := context.Background()
-	err := c.Ratelimiter.Wait(ctx) // This is a blocking call. Honors the rate limit
-	if err != nil {
-		return nil, err
-	}
 	c.incrRPS()
 	req.Header.Add("User-Agent", c.userAgent)
 	resp, err := c.Client.Do(req)
@@ -172,12 +152,6 @@ func (c *Client) UserAgent() string {
 	c.Lock()
 	defer c.Unlock()
 	return c.userAgent
-}
-
-func (c *Client) SetUserAgent(userAgent string) {
-	c.Lock()
-	defer c.Unlock()
-	c.userAgent = userAgent
 }
 
 // FakeDo for testing purposes

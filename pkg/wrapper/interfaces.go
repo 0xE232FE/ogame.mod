@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alaingilbert/ogame/pkg/device"
+	"github.com/alaingilbert/ogame/pkg/gameforge"
 
 	"github.com/alaingilbert/ogame/pkg/extractor"
 	"github.com/alaingilbert/ogame/pkg/httpclient"
@@ -171,7 +172,7 @@ var _ Prioritizable = (*Prioritize)(nil)
 // Wrapper all available functions to control ogame bot
 type Wrapper interface {
 	Prioritizable
-	AddAccount(number int, lang string) (*AddAccountRes, error)
+	AddAccount(number int, lang string) (*gameforge.AddAccountRes, error)
 	BytesDownloaded() int64
 	BytesUploaded() int64
 	CharacterClass() ogame.CharacterClass
@@ -193,8 +194,8 @@ type Wrapper interface {
 	GetNbSystems() int64
 	GetPublicIP() (string, error)
 	GetResearchSpeed() int64
-	GetServer() Server
-	GetServerData() ServerData
+	GetServer() gameforge.Server
+	GetServerData() gameforge.ServerData
 	GetSession() string
 	GetState() (bool, string)
 	GetTasks() taskRunner.TasksOverview
@@ -211,7 +212,6 @@ type Wrapper interface {
 	IsPioneers() bool
 	IsV7() bool
 	IsV9() bool
-	IsV10() bool
 	IsVacationModeEnabled() bool
 	Location() *time.Location
 	OnStateChange(clb func(locked bool, actor string))
@@ -225,11 +225,10 @@ type Wrapper interface {
 	ServerURL() string
 	ServerVersion() string
 	SetClient(*httpclient.Client)
-	SetGetServerDataWrapper(func(func() (ServerData, error)) (ServerData, error))
+	SetGetServerDataWrapper(func(func() (gameforge.ServerData, error)) (gameforge.ServerData, error))
 	SetLoginWrapper(func(func() (bool, error)) error)
 	SetOGameCredentials(username, password, otpSecret, bearerToken string)
 	SetProxy(proxyAddress, username, password, proxyType string, loginOnly bool, config *tls.Config) error
-	SetUserAgent(newUserAgent string)
 	ValidateAccount(code string) error
 	WithPriority(priority taskRunner.Priority) Prioritizable
 }

@@ -19,8 +19,3 @@ func NewExtractor() *Extractor {
 func (e Extractor) ExtractResourceSettings(pageHTML []byte) (ogame.ResourceSettings, string, error) {
 	return extractResourceSettingsFromPage(pageHTML)
 }
-
-// ExtractEmpire ...
-func (e *Extractor) ExtractEmpire(pageHTML []byte) ([]ogame.EmpireCelestial, error) {
-	return extractEmpire(pageHTML)
-}

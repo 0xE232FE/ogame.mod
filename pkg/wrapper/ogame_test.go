@@ -2,15 +2,14 @@ package wrapper
 
 import (
 	"bytes"
-	"io/ioutil"
-	"regexp"
-	"testing"
-
 	"github.com/PuerkitoBio/goquery"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/utils"
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
+	"os"
+	"regexp"
+	"testing"
 )
 
 func BenchmarkUserInfoRegex(b *testing.B) {
@@ -19,7 +18,7 @@ func BenchmarkUserInfoRegex(b *testing.B) {
 		playerName := string(regexp.MustCompile(`playerName="([^"]+)"`).FindSubmatch(pageHTML)[1])
 		return playerID, playerName
 	}
-	pageHTMLBytes, _ := ioutil.ReadFile("../../samples/overview_inactive.html")
+	pageHTMLBytes, _ := os.ReadFile("../../samples/overview_inactive.html")
 	for n := 0; n < b.N; n++ {
 		extractUserRegex(pageHTMLBytes)
 	}
@@ -32,7 +31,7 @@ func BenchmarkUserInfoGoquery(b *testing.B) {
 		playerName := doc.Find("meta[name=ogame-player-name]").AttrOr("content", "")
 		return playerID, playerName
 	}
-	pageHTMLBytes, _ := ioutil.ReadFile("../../samples/overview_inactive.html")
+	pageHTMLBytes, _ := os.ReadFile("../../samples/overview_inactive.html")
 	for n := 0; n < b.N; n++ {
 		extractUserGoquery(pageHTMLBytes)
 	}
@@ -100,20 +99,20 @@ func TestEnergyProduced(t *testing.T) {
 }
 
 func TestExtractCargoCapacity(t *testing.T) {
-	pageHTMLBytes, _ := ioutil.ReadFile("../../samples/unversioned/sendfleet3.htm")
+	pageHTMLBytes, _ := os.ReadFile("../../samples/unversioned/sendfleet3.htm")
 	fleet3Doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTMLBytes))
 	cargo := utils.ParseInt(fleet3Doc.Find("#maxresources").Text())
 	assert.Equal(t, int64(442500), cargo)
 }
 
 //func TestExtractGalaxyInfosPlanetActivityWithoutDetailedActivity(t *testing.T) {
-//	pageHTMLBytes, _ := ioutil.ReadFile("../../samples/galaxy_planet_activity_without_detailed_activity.html")
+//	pageHTMLBytes, _ := os.ReadFile("../../samples/galaxy_planet_activity_without_detailed_activity.html")
 //	infos, _ := NewExtractor().ExtractGalaxyInfos(pageHTMLBytes, "Commodore Nomade", 123, 456)
 //	assert.Equal(t, 49, infos.Position(5).Activity)
 //}
 
 func TestExtractFleetsFromEventList(t *testing.T) {
-	//pageHTMLBytes, _ := ioutil.ReadFile("../../samples/eventlist_test.html")
+	//pageHTMLBytes, _ := os.ReadFile("../../samples/eventlist_test.html")
 	//fleets := NewExtractor().ExtractFleetsFromEventList(pageHTMLBytes)
 	//assert.Equal(t, 4, len(fleets))
 }
