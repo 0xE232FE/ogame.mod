@@ -158,6 +158,12 @@ func ValidateAccount(client httpclient.IHttpClient, ctx context.Context, lobby, 
 
 func buildBearerHeaderValue(token string) string { return "Bearer " + token }
 
+func setDefaultParams(params *GfLoginParams) {
+	if params.Ctx == nil {
+		params.Ctx = context.Background()
+	}
+}
+
 // LoginAndRedeemCode ...
 func LoginAndRedeemCode(params *GfLoginParams, code string) error {
 	postSessionsRes, err := GFLogin(params)
@@ -314,6 +320,7 @@ type GFLoginRes struct {
 func (r GFLoginRes) GetBearerToken() string { return r.Token }
 
 func GFLogin(params *GfLoginParams) (out *GFLoginRes, err error) {
+	setDefaultParams(params)
 	if params.Device == nil {
 		return out, errors.New("device is nil")
 	}
@@ -538,9 +545,13 @@ type Server struct {
 	ServerClosed  int64
 	Prefered      int64
 	SignupClosed  int64
+	MultiLanguage int64
+	AvailableOn   []string
 	Settings      struct {
 		AKS                      int64
-		FleetSpeed               int64
+		FleetSpeedWar            int64
+		FleetSpeedHolding        int64
+		FleetSpeedPeaceful       int64
 		WreckField               int64
 		ServerLabel              string
 		EconomySpeed             any // can be 8 or "x8"
@@ -550,6 +561,7 @@ type Server struct {
 		EspionageProbeRaids      int64
 		PremiumValidationGift    int64
 		DebrisFieldFactorShips   int64
+		ResearchDurationDivisor  float64
 		DebrisFieldFactorDefence int64
 	}
 }

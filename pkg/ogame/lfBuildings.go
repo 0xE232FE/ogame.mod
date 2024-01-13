@@ -7,6 +7,56 @@ import (
 // LazyLfBuildings ...
 type LazyLfBuildings func() LfBuildings
 
+func (b LazyLfBuildings) ByID(id ID) int64                     { return b().ByID(id) }
+func (b LazyLfBuildings) GetResidentialSector() int64          { return b().ResidentialSector }
+func (b LazyLfBuildings) GetBiosphereFarm() int64              { return b().BiosphereFarm }
+func (b LazyLfBuildings) GetResearchCentre() int64             { return b().ResearchCentre }
+func (b LazyLfBuildings) GetAcademyOfSciences() int64          { return b().AcademyOfSciences }
+func (b LazyLfBuildings) GetNeuroCalibrationCentre() int64     { return b().NeuroCalibrationCentre }
+func (b LazyLfBuildings) GetHighEnergySmelting() int64         { return b().HighEnergySmelting }
+func (b LazyLfBuildings) GetFoodSilo() int64                   { return b().FoodSilo }
+func (b LazyLfBuildings) GetFusionPoweredProduction() int64    { return b().FusionPoweredProduction }
+func (b LazyLfBuildings) GetSkyscraper() int64                 { return b().Skyscraper }
+func (b LazyLfBuildings) GetBiotechLab() int64                 { return b().BiotechLab }
+func (b LazyLfBuildings) GetMetropolis() int64                 { return b().Metropolis }
+func (b LazyLfBuildings) GetPlanetaryShield() int64            { return b().PlanetaryShield }
+func (b LazyLfBuildings) GetMeditationEnclave() int64          { return b().MeditationEnclave }
+func (b LazyLfBuildings) GetCrystalFarm() int64                { return b().CrystalFarm }
+func (b LazyLfBuildings) GetRuneTechnologium() int64           { return b().RuneTechnologium }
+func (b LazyLfBuildings) GetRuneForge() int64                  { return b().RuneForge }
+func (b LazyLfBuildings) GetOriktorium() int64                 { return b().Oriktorium }
+func (b LazyLfBuildings) GetMagmaForge() int64                 { return b().MagmaForge }
+func (b LazyLfBuildings) GetDisruptionChamber() int64          { return b().DisruptionChamber }
+func (b LazyLfBuildings) GetMegalith() int64                   { return b().Megalith }
+func (b LazyLfBuildings) GetCrystalRefinery() int64            { return b().CrystalRefinery }
+func (b LazyLfBuildings) GetDeuteriumSynthesiser() int64       { return b().DeuteriumSynthesiser }
+func (b LazyLfBuildings) GetMineralResearchCentre() int64      { return b().MineralResearchCentre }
+func (b LazyLfBuildings) GetAdvancedRecyclingPlant() int64     { return b().AdvancedRecyclingPlant }
+func (b LazyLfBuildings) GetAssemblyLine() int64               { return b().AssemblyLine }
+func (b LazyLfBuildings) GetFusionCellFactory() int64          { return b().FusionCellFactory }
+func (b LazyLfBuildings) GetRoboticsResearchCentre() int64     { return b().RoboticsResearchCentre }
+func (b LazyLfBuildings) GetUpdateNetwork() int64              { return b().UpdateNetwork }
+func (b LazyLfBuildings) GetQuantumComputerCentre() int64      { return b().QuantumComputerCentre }
+func (b LazyLfBuildings) GetAutomatisedAssemblyCentre() int64  { return b().AutomatisedAssemblyCentre }
+func (b LazyLfBuildings) GetHighPerformanceTransformer() int64 { return b().HighPerformanceTransformer }
+func (b LazyLfBuildings) GetMicrochipAssemblyLine() int64      { return b().MicrochipAssemblyLine }
+func (b LazyLfBuildings) GetProductionAssemblyHall() int64     { return b().ProductionAssemblyHall }
+func (b LazyLfBuildings) GetHighPerformanceSynthesiser() int64 { return b().HighPerformanceSynthesiser }
+func (b LazyLfBuildings) GetChipMassProduction() int64         { return b().ChipMassProduction }
+func (b LazyLfBuildings) GetNanoRepairBots() int64             { return b().NanoRepairBots }
+func (b LazyLfBuildings) GetSanctuary() int64                  { return b().Sanctuary }
+func (b LazyLfBuildings) GetAntimatterCondenser() int64        { return b().AntimatterCondenser }
+func (b LazyLfBuildings) GetVortexChamber() int64              { return b().VortexChamber }
+func (b LazyLfBuildings) GetHallsOfRealisation() int64         { return b().HallsOfRealisation }
+func (b LazyLfBuildings) GetForumOfTranscendence() int64       { return b().ForumOfTranscendence }
+func (b LazyLfBuildings) GetAntimatterConvector() int64        { return b().AntimatterConvector }
+func (b LazyLfBuildings) GetCloningLaboratory() int64          { return b().CloningLaboratory }
+func (b LazyLfBuildings) GetChrysalisAccelerator() int64       { return b().ChrysalisAccelerator }
+func (b LazyLfBuildings) GetBioModifier() int64                { return b().BioModifier }
+func (b LazyLfBuildings) GetPsionicModulator() int64           { return b().PsionicModulator }
+func (b LazyLfBuildings) GetShipManufacturingHall() int64      { return b().ShipManufacturingHall }
+func (b LazyLfBuildings) GetSupraRefractor() int64             { return b().SupraRefractor }
+
 type LifeformType int64
 
 const (
@@ -84,6 +134,55 @@ type LfBuildings struct {
 	ShipManufacturingHall      int64 // 14111
 	SupraRefractor             int64 // 14112
 }
+
+func (b LfBuildings) GetResidentialSector() int64          { return b.ResidentialSector }
+func (b LfBuildings) GetBiosphereFarm() int64              { return b.BiosphereFarm }
+func (b LfBuildings) GetResearchCentre() int64             { return b.ResearchCentre }
+func (b LfBuildings) GetAcademyOfSciences() int64          { return b.AcademyOfSciences }
+func (b LfBuildings) GetNeuroCalibrationCentre() int64     { return b.NeuroCalibrationCentre }
+func (b LfBuildings) GetHighEnergySmelting() int64         { return b.HighEnergySmelting }
+func (b LfBuildings) GetFoodSilo() int64                   { return b.FoodSilo }
+func (b LfBuildings) GetFusionPoweredProduction() int64    { return b.FusionPoweredProduction }
+func (b LfBuildings) GetSkyscraper() int64                 { return b.Skyscraper }
+func (b LfBuildings) GetBiotechLab() int64                 { return b.BiotechLab }
+func (b LfBuildings) GetMetropolis() int64                 { return b.Metropolis }
+func (b LfBuildings) GetPlanetaryShield() int64            { return b.PlanetaryShield }
+func (b LfBuildings) GetMeditationEnclave() int64          { return b.MeditationEnclave }
+func (b LfBuildings) GetCrystalFarm() int64                { return b.CrystalFarm }
+func (b LfBuildings) GetRuneTechnologium() int64           { return b.RuneTechnologium }
+func (b LfBuildings) GetRuneForge() int64                  { return b.RuneForge }
+func (b LfBuildings) GetOriktorium() int64                 { return b.Oriktorium }
+func (b LfBuildings) GetMagmaForge() int64                 { return b.MagmaForge }
+func (b LfBuildings) GetDisruptionChamber() int64          { return b.DisruptionChamber }
+func (b LfBuildings) GetMegalith() int64                   { return b.Megalith }
+func (b LfBuildings) GetCrystalRefinery() int64            { return b.CrystalRefinery }
+func (b LfBuildings) GetDeuteriumSynthesiser() int64       { return b.DeuteriumSynthesiser }
+func (b LfBuildings) GetMineralResearchCentre() int64      { return b.MineralResearchCentre }
+func (b LfBuildings) GetAdvancedRecyclingPlant() int64     { return b.AdvancedRecyclingPlant }
+func (b LfBuildings) GetAssemblyLine() int64               { return b.AssemblyLine }
+func (b LfBuildings) GetFusionCellFactory() int64          { return b.FusionCellFactory }
+func (b LfBuildings) GetRoboticsResearchCentre() int64     { return b.RoboticsResearchCentre }
+func (b LfBuildings) GetUpdateNetwork() int64              { return b.UpdateNetwork }
+func (b LfBuildings) GetQuantumComputerCentre() int64      { return b.QuantumComputerCentre }
+func (b LfBuildings) GetAutomatisedAssemblyCentre() int64  { return b.AutomatisedAssemblyCentre }
+func (b LfBuildings) GetHighPerformanceTransformer() int64 { return b.HighPerformanceTransformer }
+func (b LfBuildings) GetMicrochipAssemblyLine() int64      { return b.MicrochipAssemblyLine }
+func (b LfBuildings) GetProductionAssemblyHall() int64     { return b.ProductionAssemblyHall }
+func (b LfBuildings) GetHighPerformanceSynthesiser() int64 { return b.HighPerformanceSynthesiser }
+func (b LfBuildings) GetChipMassProduction() int64         { return b.ChipMassProduction }
+func (b LfBuildings) GetNanoRepairBots() int64             { return b.NanoRepairBots }
+func (b LfBuildings) GetSanctuary() int64                  { return b.Sanctuary }
+func (b LfBuildings) GetAntimatterCondenser() int64        { return b.AntimatterCondenser }
+func (b LfBuildings) GetVortexChamber() int64              { return b.VortexChamber }
+func (b LfBuildings) GetHallsOfRealisation() int64         { return b.HallsOfRealisation }
+func (b LfBuildings) GetForumOfTranscendence() int64       { return b.ForumOfTranscendence }
+func (b LfBuildings) GetAntimatterConvector() int64        { return b.AntimatterConvector }
+func (b LfBuildings) GetCloningLaboratory() int64          { return b.CloningLaboratory }
+func (b LfBuildings) GetChrysalisAccelerator() int64       { return b.ChrysalisAccelerator }
+func (b LfBuildings) GetBioModifier() int64                { return b.BioModifier }
+func (b LfBuildings) GetPsionicModulator() int64           { return b.PsionicModulator }
+func (b LfBuildings) GetShipManufacturingHall() int64      { return b.ShipManufacturingHall }
+func (b LfBuildings) GetSupraRefractor() int64             { return b.SupraRefractor }
 
 // Lazy returns a function that return self
 func (b LfBuildings) Lazy() LazyLfBuildings {
@@ -257,7 +356,7 @@ func newResearchCentre() *researchCentre {
 	b.ID = ResearchCentreID
 	b.IncreaseFactor = 1.3
 	b.BaseCost = Resources{Metal: 20000, Crystal: 25000, Deuterium: 10000}
-	b.Requirements = map[ID]int64{ResidentialSectorID: 12, BiosphereFarmID: 13}
+	b.Requirements = map[ID]int64{ResidentialSectorID: 21, BiosphereFarmID: 22}
 	return b
 }
 
@@ -272,7 +371,7 @@ func newAcademyOfSciences() *academyOfSciences {
 	b.IncreaseFactor = 1.70
 	b.populationIncreaseFactor = 1.10
 	b.BaseCost = Resources{Metal: 5000, Crystal: 3200, Deuterium: 1500, Population: 20000000}
-	b.Requirements = map[ID]int64{ResidentialSectorID: 40}
+	b.Requirements = map[ID]int64{ResidentialSectorID: 41}
 	return b
 }
 
@@ -287,7 +386,7 @@ func newNeuroCalibrationCentre() *neuroCalibrationCentre {
 	b.IncreaseFactor = 1.70
 	b.populationIncreaseFactor = 1.10
 	b.BaseCost = Resources{Metal: 50000, Crystal: 40000, Deuterium: 50000, Population: 100000000}
-	b.Requirements = map[ID]int64{ResidentialSectorID: 40, AcademyOfSciencesID: 1, FusionPoweredProductionID: 1, SkyscraperID: 5}
+	b.Requirements = map[ID]int64{ResidentialSectorID: 41, AcademyOfSciencesID: 1, FusionPoweredProductionID: 1, SkyscraperID: 5}
 	return b
 }
 
@@ -300,8 +399,8 @@ func newHighEnergySmelting() *highEnergySmelting {
 	b.Name = "high energy smelting"
 	b.ID = HighEnergySmeltingID
 	b.IncreaseFactor = 1.50
-	b.BaseCost = Resources{Metal: 7500, Crystal: 5000, Deuterium: 3000}
-	b.Requirements = map[ID]int64{ResidentialSectorID: 12, BiosphereFarmID: 13, ResearchCentreID: 5}
+	b.BaseCost = Resources{Metal: 9000, Crystal: 6000, Deuterium: 3000}
+	b.Requirements = map[ID]int64{ResidentialSectorID: 21, BiosphereFarmID: 22, ResearchCentreID: 5}
 	return b
 }
 
@@ -315,7 +414,7 @@ func newFoodSilo() *foodSilo {
 	b.ID = FoodSiloID
 	b.IncreaseFactor = 1.09
 	b.BaseCost = Resources{Metal: 25000, Crystal: 13000, Deuterium: 7000}
-	b.Requirements = map[ID]int64{ResidentialSectorID: 12, BiosphereFarmID: 13, ResearchCentreID: 5, HighEnergySmeltingID: 3}
+	b.Requirements = map[ID]int64{ResidentialSectorID: 21, BiosphereFarmID: 22, ResearchCentreID: 5, HighEnergySmeltingID: 3}
 	return b
 }
 
@@ -328,8 +427,8 @@ func newFusionPoweredProduction() *fusionPoweredProduction {
 	b.Name = "fusion powered production"
 	b.ID = FusionPoweredProductionID
 	b.IncreaseFactor = 1.50
-	b.BaseCost = Resources{Metal: 50000, Crystal: 25000, Deuterium: 25000}
-	b.Requirements = map[ID]int64{ResidentialSectorID: 40, AcademyOfSciencesID: 1}
+	b.BaseCost = Resources{Metal: 50000, Crystal: 25000, Deuterium: 15000}
+	b.Requirements = map[ID]int64{ResidentialSectorID: 41, AcademyOfSciencesID: 1}
 	return b
 }
 
@@ -343,7 +442,7 @@ func newSkyscraper() *skyscraper {
 	b.ID = SkyscraperID
 	b.IncreaseFactor = 1.09
 	b.BaseCost = Resources{Metal: 75000, Crystal: 20000, Deuterium: 25000}
-	b.Requirements = map[ID]int64{ResidentialSectorID: 40, AcademyOfSciencesID: 1, FusionPoweredProductionID: 1}
+	b.Requirements = map[ID]int64{ResidentialSectorID: 41, AcademyOfSciencesID: 1, FusionPoweredProductionID: 1}
 	return b
 }
 
@@ -357,7 +456,7 @@ func newBiotechLab() *biotechLab {
 	b.ID = BiotechLabID
 	b.IncreaseFactor = 1.12
 	b.BaseCost = Resources{Metal: 150000, Crystal: 30000, Deuterium: 15000}
-	b.Requirements = map[ID]int64{ResidentialSectorID: 40, AcademyOfSciencesID: 1, FusionPoweredProductionID: 2}
+	b.Requirements = map[ID]int64{ResidentialSectorID: 41, AcademyOfSciencesID: 1, FusionPoweredProductionID: 2}
 	return b
 }
 
@@ -386,12 +485,12 @@ func newPlanetaryShield() *planetaryShield {
 	b.IncreaseFactor = 1.20
 	b.BaseCost = Resources{Metal: 250000, Crystal: 125000, Deuterium: 125000}
 	b.Requirements = map[ID]int64{
-		ResidentialSectorID:       40,
-		BiosphereFarmID:           13,
+		ResidentialSectorID:       41,
+		BiosphereFarmID:           22,
 		ResearchCentreID:          5,
 		AcademyOfSciencesID:       1,
 		FusionPoweredProductionID: 5,
-		SkyscraperID:              5,
+		SkyscraperID:              6,
 		HighEnergySmeltingID:      3,
 		MetropolisID:              5,
 		FoodSiloID:                4,

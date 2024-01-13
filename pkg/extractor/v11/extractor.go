@@ -20,6 +20,21 @@ func (e Extractor) ExtractResourceSettings(pageHTML []byte) (ogame.ResourceSetti
 	return extractResourceSettingsFromPage(pageHTML)
 }
 
+// ExtractCancelBuildingInfos ...
+func (e Extractor) ExtractCancelBuildingInfos(pageHTML []byte) (token string, techID, listID int64, err error) {
+	return extractCancelBuildingInfos(pageHTML)
+}
+
+// ExtractCancelResearchInfos ...
+func (e Extractor) ExtractCancelResearchInfos(pageHTML []byte) (token string, techID, listID int64, err error) {
+	return extractCancelResearchInfos(pageHTML)
+}
+
+// ExtractCancelLfBuildingInfos ...
+func (e Extractor) ExtractCancelLfBuildingInfos(pageHTML []byte) (token string, id, listID int64, err error) {
+	return extractCancelLfBuildingInfos(pageHTML)
+}
+
 // ExtractEmpire ...
 func (e *Extractor) ExtractEmpire(pageHTML []byte) ([]ogame.EmpireCelestial, error) {
 	return extractEmpire(pageHTML)

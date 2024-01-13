@@ -363,7 +363,7 @@ type TraderImportExportExtractorDoc interface {
 
 // FetchTechsExtractorBytes ajax page fetchTechs
 type FetchTechsExtractorBytes interface {
-	ExtractTechs(pageHTML []byte) (ogame.ResourcesBuildings, ogame.Facilities, ogame.ShipsInfos, ogame.DefensesInfos, ogame.Researches, ogame.LfBuildings, error)
+	ExtractTechs(pageHTML []byte) (ogame.ResourcesBuildings, ogame.Facilities, ogame.ShipsInfos, ogame.DefensesInfos, ogame.Researches, ogame.LfBuildings, ogame.LfResearches, error)
 }
 
 type ResourcesSettingsExtractorBytes interface {

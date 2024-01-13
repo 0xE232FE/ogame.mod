@@ -1187,7 +1187,9 @@ LOOP:
 			}
 		} else {
 			b.error("unknown message received:", buf)
-			time.Sleep(time.Second)
+			select {
+			case <-time.After(time.Second):
+			}
 		}
 	}
 }
@@ -1355,7 +1357,9 @@ LOOP:
 			}
 		} else {
 			b.error("unknown message received:", string(buf))
-			time.Sleep(time.Second)
+			select {
+			case <-time.After(time.Second):
+			}
 		}
 	}
 }
@@ -1406,6 +1410,8 @@ func IsKnowFullPage(vals url.Values) bool {
 		ChatPageName,
 		DefensesPageName,
 		SuppliesPageName,
+		LfBuildingsPageName,
+		LfResearchPageName,
 		FacilitiesPageName,
 		FleetdispatchPageName,
 	})
@@ -3101,11 +3107,11 @@ func (b *OGame) getFacilities(celestialID ogame.CelestialID, options ...Option) 
 	return page.ExtractFacilities()
 }
 
-func (b *OGame) getTechs(celestialID ogame.CelestialID) (ogame.ResourcesBuildings, ogame.Facilities, ogame.ShipsInfos, ogame.DefensesInfos, ogame.Researches, ogame.LfBuildings, error) {
+func (b *OGame) getTechs(celestialID ogame.CelestialID) (ogame.ResourcesBuildings, ogame.Facilities, ogame.ShipsInfos, ogame.DefensesInfos, ogame.Researches, ogame.LfBuildings, ogame.LfResearches, error) {
 	vals := url.Values{"page": {FetchTechsName}}
 	page, err := getAjaxPage[parser.FetchTechsAjaxPage](b, vals, ChangePlanet(celestialID))
 	if err != nil {
-		return ogame.ResourcesBuildings{}, ogame.Facilities{}, ogame.ShipsInfos{}, ogame.DefensesInfos{}, ogame.Researches{}, ogame.LfBuildings{}, err
+		return ogame.ResourcesBuildings{}, ogame.Facilities{}, ogame.ShipsInfos{}, ogame.DefensesInfos{}, ogame.Researches{}, ogame.LfBuildings{}, ogame.LfResearches{}, err
 	}
 	return page.ExtractTechs()
 }
@@ -3348,8 +3354,8 @@ func (b *OGame) constructionsBeingBuilt(celestialID ogame.CelestialID) (ogame.ID
 }
 
 func (b *OGame) cancel(token string, techID, listID int64) error {
-	_, _ = b.getPageContent(url.Values{"page": {"ingame"}, "component": {"overview"}, "modus": {"2"}, "token": {token},
-		"type": {utils.FI64(techID)}, "listid": {utils.FI64(listID)}, "action": {"cancel"}})
+	_, _ = b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"buildlistactions"}, "action": {"cancelEntry"}, "asJson": {"1"}},
+		url.Values{"technologyId": {utils.FI64(techID)}, "listId": {utils.FI64(listID)}, "token": {token}})
 	return nil
 }
 
@@ -3918,7 +3924,11 @@ func getMessages[T any](b *OGame, maxPage int64, tabID ogame.MessagesTabID, extr
 			break
 		}
 		if page > 1 {
-			time.Sleep(utils.RandMs(500, 1500))
+			select {
+			case <-time.After(utils.RandMs(500, 1500)):
+			case <-b.ctx.Done():
+				return msgs, ogame.ErrBotInactive
+			}
 		}
 		pageHTML, _ := b.getPageMessages(page, tabID)
 		newMessages, newNbPage, _ := extractor(pageHTML)
@@ -4000,7 +4010,11 @@ func (b *OGame) getExpeditionMessageAt(t time.Time) (ogame.ExpeditionMessage, er
 LOOP:
 	for page <= nbPage {
 		if page > 1 {
-			time.Sleep(utils.RandMs(500, 1500))
+			select {
+			case <-time.After(utils.RandMs(500, 1500)):
+			case <-b.ctx.Done():
+				return ogame.ExpeditionMessage{}, ogame.ErrBotInactive
+			}
 		}
 		pageHTML, _ := b.getPageMessages(page, ExpeditionsMessagesTabID)
 		newMessages, newNbPage, _ := b.extractor.ExtractExpeditionMessages(pageHTML)
@@ -4023,7 +4037,11 @@ func (b *OGame) getCombatReportFor(coord ogame.Coordinate) (ogame.CombatReportSu
 	var nbPage int64 = 1
 	for page <= nbPage {
 		if page > 1 {
-			time.Sleep(utils.RandMs(500, 1500))
+			select {
+			case <-time.After(utils.RandMs(500, 1500)):
+			case <-b.ctx.Done():
+				return ogame.CombatReportSummary{}, ogame.ErrBotInactive
+			}
 		}
 		pageHTML, err := b.getPageMessages(page, CombatReportsMessagesTabID)
 		if err != nil {
@@ -4051,7 +4069,11 @@ func (b *OGame) getEspionageReportFor(coord ogame.Coordinate) (ogame.EspionageRe
 	var nbPage int64 = 1
 	for page <= nbPage {
 		if page > 1 {
-			time.Sleep(utils.RandMs(500, 1500))
+			select {
+			case <-time.After(utils.RandMs(500, 1500)):
+			case <-b.ctx.Done():
+				return ogame.EspionageReport{}, ogame.ErrBotInactive
+			}
 		}
 		pageHTML, err := b.getPageMessages(page, EspionageMessagesTabID)
 		if err != nil {
@@ -4936,7 +4958,7 @@ func (b *OGame) GetResourcesDetails(celestialID ogame.CelestialID) (ogame.Resour
 }
 
 // GetTechs gets a celestial supplies/facilities/ships/researches
-func (b *OGame) GetTechs(celestialID ogame.CelestialID) (ogame.ResourcesBuildings, ogame.Facilities, ogame.ShipsInfos, ogame.DefensesInfos, ogame.Researches, ogame.LfBuildings, error) {
+func (b *OGame) GetTechs(celestialID ogame.CelestialID) (ogame.ResourcesBuildings, ogame.Facilities, ogame.ShipsInfos, ogame.DefensesInfos, ogame.Researches, ogame.LfBuildings, ogame.LfResearches, error) {
 	return b.WithPriority(taskRunner.Normal).GetTechs(celestialID)
 }
 
