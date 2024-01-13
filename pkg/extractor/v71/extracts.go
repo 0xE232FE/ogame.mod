@@ -411,11 +411,11 @@ func extractTechs(pageHTML []byte) (supplies ogame.ResourcesBuildings, facilitie
 	if strings.ContainsAny(string(pageHTML), "[") && strings.ContainsAny(string(pageHTML), "]") {
 		err := json.Unmarshal(pageHTML, &resArray)
 		if err != nil {
-			return supplies, facilities, shipsInfos, defenses, researches, lfBuildings, ogame.ErrInvalidPlanetID
+			return supplies, facilities, shipsInfos, defenses, researches, lfBuildings, lfResearches, ogame.ErrInvalidPlanetID
 		}
 
 		if len(resArray) == 1 {
-			return supplies, facilities, shipsInfos, defenses, researches, lfBuildings, ogame.ErrInvalidPlanetID
+			return supplies, facilities, shipsInfos, defenses, researches, lfBuildings, lfResearches, ogame.ErrInvalidPlanetID
 		}
 
 		if len(resArray) == 5 {
@@ -424,7 +424,7 @@ func extractTechs(pageHTML []byte) (supplies ogame.ResourcesBuildings, facilitie
 				CrystalMine:          resArray[2],
 				DeuteriumSynthesizer: resArray[3],
 				SolarPlant:           resArray[4],
-			}, ogame.Facilities{}, ogame.ShipsInfos{}, ogame.DefensesInfos{}, ogame.Researches{}, ogame.LfBuildings{}, nil
+			}, ogame.Facilities{}, ogame.ShipsInfos{}, ogame.DefensesInfos{}, ogame.Researches{}, ogame.LfBuildings{}, ogame.LfResearches{}, nil
 		}
 	}
 	if err = json.Unmarshal(pageHTML, &res); err != nil {

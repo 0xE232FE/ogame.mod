@@ -3,7 +3,6 @@ package v11
 import (
 	"bytes"
 	"errors"
-	"github.com/alaingilbert/ogame/pkg/extractor/v6"
 	"reflect"
 	"regexp"
 	"strings"
@@ -11,7 +10,6 @@ import (
 	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/utils"
-	"regexp"
 
 	"github.com/PuerkitoBio/goquery"
 )
