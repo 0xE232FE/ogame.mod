@@ -1,6 +1,7 @@
 package v11
 
 import (
+	"github.com/PuerkitoBio/goquery"
 	v104 "github.com/alaingilbert/ogame/pkg/extractor/v104"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 )
@@ -38,4 +39,9 @@ func (e Extractor) ExtractCancelLfBuildingInfos(pageHTML []byte) (token string, 
 // ExtractEmpire ...
 func (e *Extractor) ExtractEmpire(pageHTML []byte) ([]ogame.EmpireCelestial, error) {
 	return extractEmpire(pageHTML)
+}
+
+// ExtractLifeformTypeFromDoc ...
+func (e Extractor) ExtractLifeformTypeFromDoc(doc *goquery.Document) ogame.LifeformType {
+	return extractLifeformTypeFromDoc(doc)
 }
