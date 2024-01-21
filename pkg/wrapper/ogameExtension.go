@@ -1311,16 +1311,14 @@ func (b *OGame) buyItem(ref string, celestialID ogame.CelestialID) error {
 		return err
 	}
 	token := m[1]
-
-	params = url.Values{"page": {"buyitem"}, "item": {ref}}
+	params = url.Values{"page": {"componentOnly"}, "component": {"itemactions"}, "action": {"buy"}, "itemUuid": {ref}, "asJson": {"1"}}
 	payload := url.Values{
-		"ajax":  {"1"},
 		"token": {token},
 	}
 	var res struct {
 		Message  interface{} `json:"message"`
-		Error    bool        `json:"error"`
-		NewToken string      `json:"newToken"`
+		Status   string      `json:"status"`
+		NewToken string      `json:"newAjaxToken"`
 	}
 	by, err := b.postPageContent(params, payload)
 	if err != nil {
@@ -1329,7 +1327,7 @@ func (b *OGame) buyItem(ref string, celestialID ogame.CelestialID) error {
 	if err := json.Unmarshal(by, &res); err != nil {
 		return err
 	}
-	if res.Error {
+	if res.Status != "success" {
 		if msg, ok := res.Message.(string); ok {
 			return errors.New(msg)
 		}

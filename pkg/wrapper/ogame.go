@@ -2641,9 +2641,16 @@ func (b *OGame) buyMarketplace(itemID int64, celestialID ogame.CelestialID) (err
 }
 
 func (b *OGame) getItems(celestialID ogame.CelestialID) (items []ogame.Item, err error) {
-	params := url.Values{"page": {"buffActivation"}, "ajax": {"1"}, "type": {"1"}}
-	pageHTML, _ := b.getPageContent(params, ChangePlanet(celestialID))
-	_, items, err = b.extractor.ExtractBuffActivation(pageHTML)
+	if b.IsVGreaterThanOrEqual("11.0.0-beta25") {
+		params := url.Values{"page": {"ajax"}, "component": {"buffActivation"}, "ajax": {"1"}, "type": {"1"}}
+		pageHTML, _ := b.getPageContent(params, ChangePlanet(celestialID))
+		_, items, err = b.extractor.ExtractBuffActivation(pageHTML)
+	} else {
+		params := url.Values{"page": {"buffActivation"}, "ajax": {"1"}, "type": {"1"}}
+		pageHTML, _ := b.getPageContent(params, ChangePlanet(celestialID))
+		_, items, err = b.extractor.ExtractBuffActivation(pageHTML)
+
+	}
 	return
 }
 

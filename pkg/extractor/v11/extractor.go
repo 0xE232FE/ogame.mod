@@ -51,10 +51,5 @@ func (e Extractor) ExtractLifeformTypeFromDoc(doc *goquery.Document) ogame.Lifef
 // ExtractBuffActivation ...
 func (e *Extractor) ExtractBuffActivation(pageHTML []byte) (string, []ogame.Item, error) {
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
-	return e.ExtractBuffActivationFromDoc(doc)
-}
-
-// ExtractBuffActivationFromDoc ...
-func (e *Extractor) ExtractBuffActivationFromDoc(doc *goquery.Document) (string, []ogame.Item, error) {
 	return extractBuffActivationFromDoc(doc)
 }
