@@ -2,7 +2,9 @@ package v11
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -286,4 +288,30 @@ func extractLifeformTypeFromDoc(doc *goquery.Document) ogame.LifeformType {
 		return ogame.Kaelesh
 	}
 	return ogame.NoneLfType
+}
+
+func extractBuffActivationFromDoc(doc *goquery.Document) (token string, items []ogame.Item, err error) {
+	scriptTxt := doc.Find("script").Text()
+	r := regexp.MustCompile(`token = "([^"]+)"`)
+	m := r.FindStringSubmatch(scriptTxt)
+	if len(m) != 2 {
+		err = errors.New("failed to find activate token")
+		return
+	}
+	token = m[1]
+	r = regexp.MustCompile(`inventoryObj\.items_inventory = ([^*]+\});`)
+	m = r.FindStringSubmatch(scriptTxt)
+	if len(m) != 2 {
+		err = errors.New("failed to find items inventory")
+		return
+	}
+	var inventoryMap map[string]ogame.Item = map[string]ogame.Item{}
+	if err = json.Unmarshal([]byte(m[1]), &inventoryMap); err != nil {
+		fmt.Println(err)
+		return
+	}
+	for _, item := range inventoryMap {
+		items = append(items, item)
+	}
+	return
 }

@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/yuin/gopher-lua v0.0.0-20191220021717-ab39c6098bdb
 	golang.org/x/net v0.7.0
-	golang.org/x/text v0.7.0
+	golang.org/x/text v0.14.0
 	golang.org/x/time v0.3.0
 	gopkg.in/abiosoft/ishell.v2 v2.0.0
 	gopkg.in/urfave/cli.v2 v2.0.0-20180128182452-d3ae77c26ac8
@@ -41,7 +41,8 @@ require (
 	github.com/glebarez/go-sqlite v1.21.2 // indirect
 	github.com/glebarez/sqlite v1.10.0 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.5.0 // indirect
+	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -50,6 +51,8 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/mattn/go-runewidth v0.0.7 // indirect
+	github.com/mattn/go-sqlite3 v1.14.19 // indirect
+	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
@@ -58,11 +61,12 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go4.org v0.0.0-20200411211856-f5505b9728dd // indirect
 	golang.org/x/crypto v0.6.0 // indirect
-	golang.org/x/image v0.0.0-20191009234506-e7c1f5e7dbb8 // indirect
+	golang.org/x/image v0.15.0 // indirect
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/retry.v1 v1.0.3 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gorm.io/driver/sqlite v1.5.4 // indirect
 	gorm.io/gorm v1.25.5 // indirect
 	modernc.org/libc v1.22.5 // indirect
 	modernc.org/mathutil v1.5.0 // indirect

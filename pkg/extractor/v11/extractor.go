@@ -1,6 +1,8 @@
 package v11
 
 import (
+	"bytes"
+
 	"github.com/PuerkitoBio/goquery"
 	v104 "github.com/alaingilbert/ogame/pkg/extractor/v104"
 	"github.com/alaingilbert/ogame/pkg/ogame"
@@ -44,4 +46,15 @@ func (e *Extractor) ExtractEmpire(pageHTML []byte) ([]ogame.EmpireCelestial, err
 // ExtractLifeformTypeFromDoc ...
 func (e Extractor) ExtractLifeformTypeFromDoc(doc *goquery.Document) ogame.LifeformType {
 	return extractLifeformTypeFromDoc(doc)
+}
+
+// ExtractBuffActivation ...
+func (e *Extractor) ExtractBuffActivation(pageHTML []byte) (string, []ogame.Item, error) {
+	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	return e.ExtractBuffActivationFromDoc(doc)
+}
+
+// ExtractBuffActivationFromDoc ...
+func (e *Extractor) ExtractBuffActivationFromDoc(doc *goquery.Document) (string, []ogame.Item, error) {
+	return extractBuffActivationFromDoc(doc)
 }
