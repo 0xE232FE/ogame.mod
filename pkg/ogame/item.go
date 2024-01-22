@@ -5,13 +5,13 @@ type Item struct {
 	Ref            string
 	Name           string
 	Image          string
-	ImageLarge     string
+	ImageLarge     string `json:"imageLarge"`
 	Title          string
 	Rarity         string // common
 	Amount         int64
-	AmountFree     int64
-	AmountBought   int64
-	canBeActivated bool
+	AmountFree     int64 `json:"amount_free"`
+	AmountBought   int64 `json:"amount_bought"`
+	CanBeActivated bool  `json:"canBeActivated"`
 	//Category                []string
 	//Currency                string // dm
 	Costs int64
