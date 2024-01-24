@@ -19,6 +19,7 @@ type Prioritize struct {
 	isTx         int32
 }
 
+// SetTaskDoneCh ...
 func (b *Prioritize) SetTaskDoneCh(ch chan struct{}) {
 	b.taskIsDoneCh = ch
 }
@@ -143,7 +144,7 @@ func (b *Prioritize) GetPlanets() ([]Planet, error) {
 
 // GetPlanet gets infos for planetID
 // Fails if planetID is invalid
-func (b *Prioritize) GetPlanet(v any) (Planet, error) {
+func (b *Prioritize) GetPlanet(v IntoPlanet) (Planet, error) {
 	b.begin("GetPlanet")
 	defer b.done()
 	return b.bot.getPlanet(v)
@@ -157,7 +158,7 @@ func (b *Prioritize) GetMoons() ([]Moon, error) {
 }
 
 // GetMoon gets infos for moonID
-func (b *Prioritize) GetMoon(v any) (Moon, error) {
+func (b *Prioritize) GetMoon(v IntoMoon) (Moon, error) {
 	b.begin("GetMoon")
 	defer b.done()
 	return b.bot.getMoon(v)
@@ -180,14 +181,14 @@ func (b *Prioritize) RecruitOfficer(typ, days int64) error {
 }
 
 // Abandon a planet. Warning: this is irreversible
-func (b *Prioritize) Abandon(v any) error {
+func (b *Prioritize) Abandon(v IntoPlanet) error {
 	b.begin("Abandon")
 	defer b.done()
 	return b.bot.abandon(v)
 }
 
 // GetCelestial get the player's planet/moon using the coordinate
-func (b *Prioritize) GetCelestial(v any) (Celestial, error) {
+func (b *Prioritize) GetCelestial(v IntoCelestial) (Celestial, error) {
 	b.begin("GetCelestial")
 	defer b.done()
 	return b.bot.getCelestial(v)
@@ -450,10 +451,10 @@ func (b *Prioritize) SendFleet(celestialID ogame.CelestialID, ships []ogame.Quan
 }
 
 // SendDiscoveryFleet sends a discovery fleet
-func (b *Prioritize) SendDiscoveryFleet(coord ogame.Coordinate, opts ...Option) error {
+func (b *Prioritize) SendDiscoveryFleet(celestialID ogame.CelestialID, coord ogame.Coordinate, options ...Option) error {
 	b.begin("SendDiscoveryFleet")
 	defer b.done()
-	return b.bot.sendDiscoveryFleet(coord, opts...)
+	return b.bot.sendDiscoveryFleet(celestialID, coord, options...)
 }
 
 // EnsureFleet either sends all the requested ships or fail
@@ -635,10 +636,10 @@ func (b *Prioritize) GetEmpire(celestialType ogame.CelestialType) ([]ogame.Empir
 }
 
 // GetEmpireJSON retrieves JSON from Empire page (Commander only).
-func (b *Prioritize) GetEmpireJSON(nbr int64) (any, error) {
+func (b *Prioritize) GetEmpireJSON(celestialType ogame.CelestialType) (any, error) {
 	b.begin("GetEmpireJSON")
 	defer b.done()
-	return b.bot.getEmpireJSON(nbr)
+	return b.bot.getEmpireJSON(celestialType)
 }
 
 // GetAuction ...
@@ -746,7 +747,8 @@ func (b *Prioritize) GetAvailableDiscoveries(opts ...Option) int64 {
 	return b.bot.getAvailableDiscoveries(opts...)
 }
 
-func (b *Prioritize) GetPositionsAvailableForDiscoveryFleet(galaxy int64, system int64, opts ...Option) ([]int64, error) {
+// GetPositionsAvailableForDiscoveryFleet ...
+func (b *Prioritize) GetPositionsAvailableForDiscoveryFleet(galaxy int64, system int64, opts ...Option) ([]ogame.Coordinate, error) {
 	b.begin("GetPositionsAvailableForDiscoveryFleet")
 	defer b.done()
 	return b.bot.getPositionsAvailableForDiscoveryFleet(galaxy, system, opts...)

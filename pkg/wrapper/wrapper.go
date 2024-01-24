@@ -5,6 +5,19 @@ import (
 	"time"
 )
 
+// IntoCoordinate any types that can be turned into a Coordinate
+type IntoCoordinate any
+
+// IntoCelestial any types that can be turned into a Celestial
+type IntoCelestial any
+
+// IntoPlanet any types that can be turned into a Planet
+type IntoPlanet any
+
+// IntoMoon any types that can be turned into a Moon
+type IntoMoon any
+
+// Options ...
 type Options struct {
 	DebugGalaxy     bool
 	SkipInterceptor bool

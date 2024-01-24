@@ -201,35 +201,41 @@ func extractMoonFromDoc(doc *goquery.Document, v any) (ogame.Moon, error) {
 }
 
 func extractCelestialFromDoc(doc *goquery.Document, v any) (ogame.Celestial, error) {
+	extractCelestialByIDFromDocLocal := extractCelestialByIDFromDoc
+	extractCelestialByCoordFromDocLocal := extractCelestialByCoordFromDoc
 	switch vv := v.(type) {
 	case ogame.Celestial:
-		return extractCelestialByIDFromDoc(doc, vv.GetID())
-	case ogame.PlanetID:
-		return extractCelestialByIDFromDoc(doc, vv.Celestial())
-	case ogame.MoonID:
-		return extractCelestialByIDFromDoc(doc, vv.Celestial())
+		return extractCelestialByIDFromDocLocal(doc, vv.GetID())
+	case ogame.Planet:
+		return extractCelestialByIDFromDocLocal(doc, vv.GetID())
+	case ogame.Moon:
+		return extractCelestialByIDFromDocLocal(doc, vv.GetID())
 	case ogame.CelestialID:
-		return extractCelestialByIDFromDoc(doc, vv)
+		return extractCelestialByIDFromDocLocal(doc, vv)
+	case ogame.PlanetID:
+		return extractCelestialByIDFromDocLocal(doc, vv.Celestial())
+	case ogame.MoonID:
+		return extractCelestialByIDFromDocLocal(doc, vv.Celestial())
 	case int:
-		return extractCelestialByIDFromDoc(doc, ogame.CelestialID(vv))
+		return extractCelestialByIDFromDocLocal(doc, ogame.CelestialID(vv))
 	case int32:
-		return extractCelestialByIDFromDoc(doc, ogame.CelestialID(vv))
+		return extractCelestialByIDFromDocLocal(doc, ogame.CelestialID(vv))
 	case int64:
-		return extractCelestialByIDFromDoc(doc, ogame.CelestialID(vv))
+		return extractCelestialByIDFromDocLocal(doc, ogame.CelestialID(vv))
 	case float32:
-		return extractCelestialByIDFromDoc(doc, ogame.CelestialID(vv))
+		return extractCelestialByIDFromDocLocal(doc, ogame.CelestialID(vv))
 	case float64:
-		return extractCelestialByIDFromDoc(doc, ogame.CelestialID(vv))
+		return extractCelestialByIDFromDocLocal(doc, ogame.CelestialID(vv))
 	case lua.LNumber:
-		return extractCelestialByIDFromDoc(doc, ogame.CelestialID(vv))
+		return extractCelestialByIDFromDocLocal(doc, ogame.CelestialID(vv))
 	case ogame.Coordinate:
-		return extractCelestialByCoordFromDoc(doc, vv)
+		return extractCelestialByCoordFromDocLocal(doc, vv)
 	case string:
 		coord, err := ogame.ParseCoord(vv)
 		if err != nil {
 			return nil, err
 		}
-		return extractCelestialByCoordFromDoc(doc, coord)
+		return extractCelestialByCoordFromDocLocal(doc, coord)
 	default:
 		return nil, ErrUnsupportedType
 	}
@@ -678,7 +684,7 @@ func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatRe
 				system := utils.DoParseI64(m[2])
 				position := utils.DoParseI64(m[3])
 				planetType := utils.DoParseI64(m[4])
-				report.Origin = &ogame.Coordinate{galaxy, system, position, ogame.CelestialType(planetType)}
+				report.Origin = &ogame.Coordinate{Galaxy: galaxy, System: system, Position: position, Type: ogame.CelestialType(planetType)}
 				if report.Origin.Equal(report.Destination) {
 					report.Origin = nil
 				}
@@ -1472,7 +1478,7 @@ func extractPlanetCoordinate(pageHTML []byte) (ogame.Coordinate, error) {
 	system := utils.DoParseI64(string(m[2]))
 	position := utils.DoParseI64(string(m[3]))
 	planetType, _ := extractPlanetType(pageHTML)
-	return ogame.Coordinate{galaxy, system, position, planetType}, nil
+	return ogame.Coordinate{Galaxy: galaxy, System: system, Position: position, Type: planetType}, nil
 }
 
 func extractTearDownToken(pageHTML []byte) (string, error) {

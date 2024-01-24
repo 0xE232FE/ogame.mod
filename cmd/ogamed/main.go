@@ -10,6 +10,7 @@ import (
 	"github.com/alaingilbert/ogame/pkg/device"
 	"github.com/alaingilbert/ogame/pkg/tlsclientconfig"
 	"github.com/alaingilbert/ogame/pkg/wrapper"
+	"github.com/alaingilbert/ogame/pkg/wrapper/solvers"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"gopkg.in/urfave/cli.v2"
@@ -338,7 +339,7 @@ func start(c *cli.Context) error {
 		APINewHostname: apiNewHostname,
 	}
 	if njaApiKey != "" {
-		params.CaptchaCallback = wrapper.NinjaSolver(njaApiKey)
+		params.CaptchaCallback = solvers.NinjaSolver(njaApiKey)
 	}
 
 	bot, err := wrapper.NewWithParams(params)

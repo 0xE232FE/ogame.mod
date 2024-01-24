@@ -166,7 +166,7 @@ func (b *OGame) ninjaSendFleet(celestialID ogame.CelestialID, ships []ogame.Quan
 	mission ogame.MissionID, resources ogame.Resources, holdingTime, unionID int64, ensure bool) (ogame.Fleet, error) {
 
 	BeginTime := time.Now()
-	originCoords := b.GetCachedCelestialByID(celestialID).GetCoordinate()
+	originCoords := b.getCachedCelestialByID(celestialID).GetCoordinate()
 	// /game/index.php?page=ajax&component=fleetdispatch&ajax=1&asJson=1
 	if ninjaFleetToken == "" {
 		// GetToken
@@ -288,7 +288,7 @@ func (b *OGame) ninjaSendFleet(celestialID ogame.CelestialID, ships []ogame.Quan
 	}
 
 	secs, _ := CalcFlightTime2(
-		b.GetCachedCelestialByID(celestialID).GetCoordinate(), where,
+		b.getCachedCelestialByID(celestialID).GetCoordinate(), where,
 		b.serverData.Galaxies, b.serverData.Systems, b.serverData.DonutGalaxy, b.serverData.DonutSystem, b.serverData.GlobalDeuteriumSaveFactor,
 		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), b.getCachedResearch(), b.characterClass, holdingTime)
 
@@ -323,7 +323,7 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 	b.debug(ships)
 
 	BeginTime := time.Now()
-	originCoords := b.GetCachedCelestialByID(celestialID).GetCoordinate()
+	originCoords := b.getCachedCelestialByID(celestialID).GetCoordinate()
 	// /game/index.php?page=ajax&component=fleetdispatch&ajax=1&asJson=1
 	// GetToken
 	nToken := url.Values{}
@@ -492,7 +492,7 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 	fuelCapacity := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(ogame.Researches{}, true, false, float64(b.serverData.CargoHyperspaceTechMultiplier))
 
 	_, fuel := CalcFlightTime2(
-		b.GetCachedCelestialByID(celestialID).GetCoordinate(), where,
+		b.getCachedCelestialByID(celestialID).GetCoordinate(), where,
 		b.serverData.Galaxies, b.serverData.Systems, b.serverData.DonutGalaxy, b.serverData.DonutSystem, b.serverData.GlobalDeuteriumSaveFactor,
 		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), techs, b.characterClass, holdingTime)
 	if fuelCapacity < fuel {
@@ -663,7 +663,7 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 	}
 
 	secs, _ := CalcFlightTime2(
-		b.GetCachedCelestialByID(celestialID).GetCoordinate(), where,
+		b.getCachedCelestialByID(celestialID).GetCoordinate(), where,
 		b.serverData.Galaxies, b.serverData.Systems, b.serverData.DonutGalaxy, b.serverData.DonutSystem, b.serverData.GlobalDeuteriumSaveFactor,
 		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), techs, b.characterClass, holdingTime)
 

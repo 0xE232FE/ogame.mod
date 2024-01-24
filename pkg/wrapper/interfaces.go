@@ -47,7 +47,7 @@ type Celestial interface {
 // Prioritizable list of all actions that needs to communicate with ogame server.
 // These actions can also be prioritized.
 type Prioritizable interface {
-	Abandon(any) error
+	Abandon(IntoPlanet) error
 	ActivateItem(string, ogame.CelestialID) error
 	Begin() Prioritizable
 	BeginNamed(name string) Prioritizable
@@ -69,12 +69,12 @@ type Prioritizable interface {
 	GetAuction() (ogame.Auction, error)
 	GetAvailableDiscoveries(...Option) int64
 	GetCachedResearch() ogame.Researches
-	GetCelestial(any) (Celestial, error)
+	GetCelestial(IntoCelestial) (Celestial, error)
 	GetCelestials() ([]Celestial, error)
 	GetCombatReportSummaryFor(ogame.Coordinate) (ogame.CombatReportSummary, error)
 	GetDMCosts(ogame.CelestialID) (ogame.DMCosts, error)
 	GetEmpire(ogame.CelestialType) ([]ogame.EmpireCelestial, error)
-	GetEmpireJSON(nbr int64) (any, error)
+	GetEmpireJSON(ogame.CelestialType) (any, error)
 	GetEspionageReport(msgID int64) (ogame.EspionageReport, error)
 	GetEspionageReportFor(ogame.Coordinate) (ogame.EspionageReport, error)
 	GetEspionageReportMessages(maxPage int64) ([]ogame.EspionageReportSummary, error)
@@ -83,12 +83,12 @@ type Prioritizable interface {
 	GetFleets(...Option) ([]ogame.Fleet, ogame.Slots)
 	GetFleetsFromEventList() []ogame.Fleet
 	GetItems(ogame.CelestialID) ([]ogame.Item, error)
-	GetMoon(any) (Moon, error)
+	GetMoon(IntoMoon) (Moon, error)
 	GetMoons() ([]Moon, error)
 	GetPageContent(url.Values) ([]byte, error)
-	GetPlanet(any) (Planet, error)
+	GetPlanet(IntoPlanet) (Planet, error)
 	GetPlanets() ([]Planet, error)
-	GetPositionsAvailableForDiscoveryFleet(galaxy int64, system int64, opts ...Option) ([]int64, error)
+	GetPositionsAvailableForDiscoveryFleet(galaxy int64, system int64, opts ...Option) ([]ogame.Coordinate, error)
 	GetResearch() (ogame.Researches, error)
 	GetSlots() (ogame.Slots, error)
 	GetUserInfos() (ogame.UserInfos, error)
@@ -135,10 +135,10 @@ type Prioritizable interface {
 	GetResourcesDetails(ogame.CelestialID) (ogame.ResourcesDetails, error)
 	GetShips(ogame.CelestialID, ...Option) (ogame.ShipsInfos, error)
 	GetTechs(celestialID ogame.CelestialID) (ogame.ResourcesBuildings, ogame.Facilities, ogame.ShipsInfos, ogame.DefensesInfos, ogame.Researches, ogame.LfBuildings, ogame.LfResearches, error)
+	SendDiscoveryFleet(ogame.CelestialID, ogame.Coordinate, ...Option) error
 	SendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifiable, speed ogame.Speed, where ogame.Coordinate, mission ogame.MissionID, resources ogame.Resources, holdingTime, unionID int64) (ogame.Fleet, error)
 	TearDown(celestialID ogame.CelestialID, id ogame.ID) error
 	TechnologyDetails(celestialID ogame.CelestialID, id ogame.ID) (ogame.TechnologyDetails, error)
-	SendDiscoveryFleet(ogame.Coordinate, ...Option) error
 
 	// Planet specific functions
 	DestroyRockets(ogame.PlanetID, int64, int64) error
@@ -167,6 +167,9 @@ type Prioritizable interface {
 var _ Prioritizable = (*OGame)(nil)
 var _ Prioritizable = (*Prioritize)(nil)
 
+// Compile time checks to ensure type satisfies Wrapper interface
+var _ Wrapper = (*OGame)(nil)
+
 // Wrapper all available functions to control ogame bot
 type Wrapper interface {
 	Prioritizable
@@ -179,7 +182,9 @@ type Wrapper interface {
 	Distance(origin, destination ogame.Coordinate) int64
 	Enable()
 	FleetDeutSaveFactor() float64
-	GetCachedCelestial(any) Celestial
+	GetCachedCelestial(IntoCelestial) (Celestial, error)
+	GetCachedPlanet(IntoPlanet) (Planet, error)
+	GetCachedMoon(IntoMoon) (Moon, error)
 	GetCachedCelestials() []Celestial
 	GetCachedMoons() []Moon
 	GetCachedPlanets() []Planet
