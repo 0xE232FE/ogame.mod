@@ -1674,6 +1674,25 @@ func (b *OGame) cancelFleet(fleetID ogame.FleetID) error {
 	return nil
 }
 
+func (b *OGame) getLastFleetFor(origin, destination ogame.Coordinate, mission ogame.MissionID) (ogame.Fleet, error) {
+	page, _ := getPage[parser.MovementPage](b)
+	fleets := page.ExtractFleets()
+	if len(fleets) > 0 {
+		maxV := ogame.Fleet{}
+		for i, fleet := range fleets {
+			if fleet.ID > maxV.ID &&
+				fleet.Origin.Equal(origin) &&
+				fleet.Destination.Equal(destination) &&
+				fleet.Mission == mission &&
+				!fleet.ReturnFlight {
+				maxV = fleets[i]
+			}
+		}
+		return maxV, nil
+	}
+	return ogame.Fleet{}, errors.New("could not find fleet")
+}
+
 func (b *OGame) getSlots() (out ogame.Slots, err error) {
 	pageHTML, err := b.getPage(FleetdispatchPageName)
 	if err != nil {
@@ -3425,10 +3444,9 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifia
 	}
 
 	// Page 5
-	movementHTML, _ := b.getPage(MovementPageName)
-	movementDoc, _ := goquery.NewDocumentFromReader(bytes.NewReader(movementHTML))
-	originCoords, _ := b.extractor.ExtractPlanetCoordinate(movementHTML)
-	fleets := b.extractor.ExtractFleetsFromDoc(movementDoc)
+	page, _ := getPage[parser.MovementPage](b)
+	originCoords, _ := page.ExtractPlanetCoordinate()
+	fleets := page.ExtractFleets()
 	if len(fleets) > 0 {
 		maxV := ogame.Fleet{}
 		for i, fleet := range fleets {
@@ -3445,7 +3463,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifia
 		}
 	}
 
-	slots, _ = b.extractor.ExtractSlotsFromDoc(movementDoc)
+	slots, _ = page.ExtractSlots()
 	if slots.InUse == slots.Total {
 		return ogame.Fleet{}, ogame.ErrAllSlotsInUse
 	}
@@ -3863,31 +3881,31 @@ func (b *OGame) getCachedCelestial(v IntoCelestial) (Celestial, error) {
 	case Moon:
 		return vv, nil
 	case ogame.CelestialID:
-		return getCachedCelestialByID(vv), nil
+		return getCachedCelestialByID(vv)
 	case ogame.PlanetID:
-		return getCachedCelestialByID(vv.Celestial()), nil
+		return getCachedCelestialByID(vv.Celestial())
 	case ogame.MoonID:
-		return getCachedCelestialByID(vv.Celestial()), nil
+		return getCachedCelestialByID(vv.Celestial())
 	case int:
-		return getCachedCelestialByID(ogame.CelestialID(vv)), nil
+		return getCachedCelestialByID(ogame.CelestialID(vv))
 	case int32:
-		return getCachedCelestialByID(ogame.CelestialID(vv)), nil
+		return getCachedCelestialByID(ogame.CelestialID(vv))
 	case int64:
-		return getCachedCelestialByID(ogame.CelestialID(vv)), nil
+		return getCachedCelestialByID(ogame.CelestialID(vv))
 	case float32:
-		return getCachedCelestialByID(ogame.CelestialID(vv)), nil
+		return getCachedCelestialByID(ogame.CelestialID(vv))
 	case float64:
-		return getCachedCelestialByID(ogame.CelestialID(vv)), nil
+		return getCachedCelestialByID(ogame.CelestialID(vv))
 	case lua.LNumber:
-		return getCachedCelestialByID(ogame.CelestialID(vv)), nil
+		return getCachedCelestialByID(ogame.CelestialID(vv))
 	case ogame.Coordinate:
-		return getCachedCelestialByCoord(vv), nil
+		return getCachedCelestialByCoord(vv)
 	case string:
 		coord, err := ogame.ParseCoord(vv)
 		if err != nil {
 			return nil, err
 		}
-		return getCachedCelestialByCoord(coord), nil
+		return getCachedCelestialByCoord(coord)
 	}
 	return nil, ErrIntoCelestial
 }
@@ -3895,23 +3913,23 @@ func (b *OGame) getCachedCelestial(v IntoCelestial) (Celestial, error) {
 var ErrIntoCelestial = errors.New("unable to find celestial")
 
 // getCachedCelestialByID return celestial from cached value
-func (b *OGame) getCachedCelestialByID(celestialID ogame.CelestialID) Celestial {
+func (b *OGame) getCachedCelestialByID(celestialID ogame.CelestialID) (Celestial, error) {
 	return b.getCelestialByPredicateFn(func(c Celestial) bool { return c.GetID() == celestialID })
 }
 
 // getCachedCelestialByCoord return celestial from cached value
-func (b *OGame) getCachedCelestialByCoord(coord ogame.Coordinate) Celestial {
+func (b *OGame) getCachedCelestialByCoord(coord ogame.Coordinate) (Celestial, error) {
 	return b.getCelestialByPredicateFn(func(c Celestial) bool { return c.GetCoordinate().Equal(coord) })
 }
 
-func (b *OGame) getCelestialByPredicateFn(clb func(Celestial) bool) Celestial {
+func (b *OGame) getCelestialByPredicateFn(clb func(Celestial) bool) (Celestial, error) {
 	celestials := b.getCachedCelestials()
 	for _, c := range celestials {
 		if clb(c) {
-			return c
+			return c, nil
 		}
 	}
-	return nil
+	return nil, ErrIntoCelestial
 }
 
 func (b *OGame) getCachedPlanets() []Planet {
@@ -4020,6 +4038,26 @@ func (b *OGame) sendDiscoveryFleet(celestialID ogame.CelestialID, coord ogame.Co
 		return errors.New(resStruct.Response.Message)
 	}
 	return nil
+}
+
+func (b *OGame) sendDiscoveryFleet2(celestialID ogame.CelestialID, coord ogame.Coordinate, options ...Option) (ogame.Fleet, error) {
+	if err := b.sendDiscoveryFleet(celestialID, coord, options...); err != nil {
+		return ogame.Fleet{}, err
+	}
+	select {
+	case <-time.After(utils.RandMs(250, 500)):
+	case <-b.ctx.Done():
+		return ogame.Fleet{}, ogame.ErrBotInactive
+	}
+	c, err := b.getCachedCelestial(celestialID)
+	if err != nil {
+		return ogame.Fleet{}, err
+	}
+	fleet, err := b.getLastFleetFor(c.GetCoordinate(), coord, ogame.SearchForLifeforms)
+	if err != nil {
+		return ogame.Fleet{}, err
+	}
+	return fleet, nil
 }
 
 func (b *OGame) getAvailableDiscoveries(opts ...Option) int64 {
