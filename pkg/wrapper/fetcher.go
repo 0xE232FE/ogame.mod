@@ -24,7 +24,6 @@ const (
 	ResearchPageName         = "research"
 	PlanetlayerPageName      = "planetlayer"
 	LogoutPageName           = "logout"
-	JumpgatelayerPageName    = "jumpgatelayer"
 	TraderOverviewPageName   = "traderOverview"
 	GalaxyPageName           = "galaxy"
 	AlliancePageName         = "alliance"
@@ -119,6 +118,7 @@ func getAjaxPage[T parser.AjaxPagePages](b *OGame, vals url.Values, opts ...Opti
 	case parser.FetchTechsAjaxPage:
 	case parser.RocketlayerAjaxPage:
 	case parser.PhalanxAjaxPage:
+	case parser.JumpGateAjaxPage:
 	default:
 		panic("not implemented")
 	}

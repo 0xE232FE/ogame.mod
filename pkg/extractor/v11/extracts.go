@@ -290,6 +290,30 @@ func extractLifeformTypeFromDoc(doc *goquery.Document) ogame.LifeformType {
 	return ogame.NoneLfType
 }
 
+func extractJumpGate(pageHTML []byte) (ogame.ShipsInfos, string, []ogame.MoonID, int64) {
+	m := regexp.MustCompile(`\$\("#cooldown"\), (\d+),`).FindSubmatch(pageHTML)
+	ships := ogame.ShipsInfos{}
+	var destinations []ogame.MoonID
+	if len(m) > 0 {
+		waitTime := int64(utils.ToInt(m[1]))
+		return ships, "", destinations, waitTime
+	}
+	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	for _, s := range ogame.Ships {
+		ships.Set(s.GetID(), utils.ParseInt(doc.Find("input#ship_"+utils.FI64(s.GetID())).AttrOr("rel", "0")))
+	}
+	token := doc.Find("input[name=token]").AttrOr("value", "")
+
+	doc.Find("select[name=targetSpaceObjectId] option").Each(func(i int, s *goquery.Selection) {
+		moonID := utils.ParseInt(s.AttrOr("value", "0"))
+		if moonID > 0 {
+			destinations = append(destinations, ogame.MoonID(moonID))
+		}
+	})
+
+	return ships, token, destinations, 0
+}
+
 func extractBuffActivationFromDoc(doc *goquery.Document) (token string, items []ogame.Item, err error) {
 	scriptTxt := doc.Find("script").Text()
 	r := regexp.MustCompile(`token = "([^"]+)"`)
