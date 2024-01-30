@@ -20,7 +20,7 @@ import (
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/taskRunner"
 	"github.com/alaingilbert/ogame/pkg/utils"
-	"github.com/labstack/echo"
+	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	cookiejar "github.com/orirawlings/persistent-cookiejar"
 	"golang.org/x/net/html"
