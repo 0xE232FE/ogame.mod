@@ -3259,7 +3259,10 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifia
 		return ogame.Fleet{}, err
 	}
 
-	fleet1Doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	fleet1Doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	if err != nil {
+		return ogame.Fleet{}, err
+	}
 	fleet1BodyID := b.extractor.ExtractBodyIDFromDoc(fleet1Doc)
 	if fleet1BodyID != FleetdispatchPageName {
 		now := time.Now().Unix()
@@ -3407,6 +3410,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifia
 	payload.Set("prioCrystal", "2")
 	payload.Set("prioDeuterium", "3")
 	payload.Set("retreatAfterDefenderRetreat", "0")
+	payload.Set("lootFoodOnAttack", "0")
 	if mission == ogame.ParkInThatAlly || mission == ogame.Expedition {
 		if mission == ogame.Expedition { // Expedition 1 to 18
 			holdingTime = utils.Clamp(holdingTime, 1, 18)
