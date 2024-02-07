@@ -54,6 +54,11 @@ func (e *Extractor) ExtractJumpGate(pageHTML []byte) (ogame.ShipsInfos, string, 
 	return extractJumpGate(pageHTML)
 }
 
+// ExtractPreferencesFromDoc ...
+func (e *Extractor) ExtractPreferencesFromDoc(doc *goquery.Document) ogame.Preferences {
+	return extractPreferencesFromDoc(doc)
+}
+
 // ExtractBuffActivation ...
 func (e *Extractor) ExtractBuffActivation(pageHTML []byte) (string, []ogame.Item, error) {
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))

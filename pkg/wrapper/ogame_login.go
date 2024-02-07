@@ -47,8 +47,9 @@ func (b *OGame) wrapLogin() error {
 
 // Return either or not the bot logged in using the provided bearer token.
 func (b *OGame) loginWithBearerToken(token string) (bool, error) {
+	botLoginFn := b.login
 	if token == "" {
-		err := b.login()
+		err := botLoginFn()
 		return false, err
 	}
 	b.bearerToken = token
@@ -57,7 +58,7 @@ func (b *OGame) loginWithBearerToken(token string) (bool, error) {
 		errors.Is(err, ogame.ErrAccountBlocked) {
 		return false, err
 	} else if err != nil {
-		err := b.login()
+		err := botLoginFn()
 		return false, err
 	}
 
@@ -65,34 +66,26 @@ func (b *OGame) loginWithBearerToken(token string) (bool, error) {
 		return false, err
 	}
 
-	page, err := getPage[parser.OverviewPage](b, SkipRetry)
+	loginOpts := []Option{SkipRetry, SkipCacheFullPage}
+	page, err := getPage[parser.OverviewPage](b, loginOpts...)
 	if err != nil {
 		if errors.Is(err, ogame.ErrNotLogged) {
-			dev := b.device
-			b.debug("get login link")
-			loginLink, err := gameforge.GetLoginLink(dev, b.ctx, b.lobby, userAccount, token)
+			loginLink, pageHTML, err := b.getAndExecLoginLink(userAccount, token)
 			if err != nil {
 				return true, err
 			}
-			pageHTML, err := execLoginLink(b, loginLink)
-			if err != nil {
-				return true, err
-			}
-			page, err := getPage[parser.OverviewPage](b, SkipRetry)
+			page, err := getPage[parser.OverviewPage](b, loginOpts...)
 			if err != nil {
 				if errors.Is(err, ogame.ErrNotLogged) {
-					err := b.login()
+					err := botLoginFn()
 					return false, err
 				}
+				return false, err
 			}
 			b.debug("login using existing cookies")
-			if err := b.loginPart3(userAccount, page); err != nil {
+			if err := b.loginPart3Tmp(userAccount, page, loginLink, pageHTML); err != nil {
 				return false, err
 			}
-			if err := dev.GetClient().Jar.(*cookiejar.Jar).Save(); err != nil {
-				return false, err
-			}
-			b.execInterceptorCallbacks(http.MethodGet, loginLink, nil, nil, pageHTML)
 			return true, nil
 		}
 		return false, err
@@ -127,18 +120,14 @@ func (b *OGame) login() error {
 	if err != nil {
 		return err
 	}
+	token := postSessionsRes.Token
 
-	server, userAccount, err := b.loginPart1(postSessionsRes.Token)
+	server, userAccount, err := b.loginPart1(token)
 	if err != nil {
 		return err
 	}
 
-	b.debug("get login link")
-	loginLink, err := gameforge.GetLoginLink(b.device, b.ctx, b.lobby, userAccount, postSessionsRes.Token)
-	if err != nil {
-		return err
-	}
-	pageHTML, err := execLoginLink(b, loginLink)
+	loginLink, pageHTML, err := b.getAndExecLoginLink(userAccount, token)
 	if err != nil {
 		return err
 	}
@@ -150,10 +139,29 @@ func (b *OGame) login() error {
 	if err != nil {
 		return err
 	}
+	if err := b.loginPart3Tmp(userAccount, page, loginLink, pageHTML); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *OGame) getAndExecLoginLink(userAccount gameforge.Account, token string) (string, []byte, error) {
+	b.debug("get login link")
+	loginLink, err := gameforge.GetLoginLink(b.device, b.ctx, b.lobby, userAccount, token)
+	if err != nil {
+		return "", nil, err
+	}
+	pageHTML, err := execLoginLink(b, loginLink)
+	if err != nil {
+		return "", nil, err
+	}
+	return loginLink, pageHTML, nil
+}
+
+func (b *OGame) loginPart3Tmp(userAccount gameforge.Account, page *parser.OverviewPage, loginLink string, pageHTML []byte) error {
 	if err := b.loginPart3(userAccount, page); err != nil {
 		return err
 	}
-
 	if err := b.device.GetClient().Jar.(*cookiejar.Jar).Save(); err != nil {
 		return err
 	}
@@ -161,6 +169,7 @@ func (b *OGame) login() error {
 	return nil
 }
 
+// Get user's accounts, get GF ogame servers, then find and return the server and userAccount that we asked to play in.
 func (b *OGame) loginPart1(token string) (server gameforge.Server, userAccount gameforge.Account, err error) {
 	client := b.device.GetClient()
 	ctx := b.ctx
@@ -216,7 +225,7 @@ func (b *OGame) loginPart2(server gameforge.Server) error {
 	return nil
 }
 
-func (b *OGame) loginPart3(userAccount gameforge.Account, page parser.OverviewPage) error {
+func (b *OGame) loginPart3(userAccount gameforge.Account, page *parser.OverviewPage) error {
 	var ext extractor.Extractor = v11.NewExtractor()
 	if ogVersion, err := version.NewVersion(b.serverData.Version); err == nil {
 		b.serverVersion = ogVersion
@@ -255,12 +264,22 @@ func (b *OGame) loginPart3(userAccount gameforge.Account, page parser.OverviewPa
 
 	serverTime, _ := page.ExtractServerTime()
 	b.location = serverTime.Location()
+
 	ext.SetLocation(b.location)
 	b.extractor = ext
 
-	b.cacheFullPageInfo(page)
+	preferencesPage, err := getPage[parser.PreferencesPage](b, SkipCacheFullPage)
+	if err != nil {
+		b.error(err)
+	}
+	b.CachedPreferences = preferencesPage.ExtractPreferences()
 
-	_, _ = b.getPage(PreferencesPageName) // Will update preferences cached values
+	ext.SetLanguage(b.CachedPreferences.Language)
+	b.extractor = ext
+
+	page.SetExtractor(ext)
+
+	b.cacheFullPageInfo(page)
 
 	// Extract chat host and port
 	m := regexp.MustCompile(`var nodeUrl\s?=\s?"https:\\/\\/([^:]+):(\d+)\\/socket.io\\/socket.io.js"`).FindSubmatch(page.GetContent())

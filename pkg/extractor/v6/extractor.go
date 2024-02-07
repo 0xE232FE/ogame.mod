@@ -533,7 +533,7 @@ func (e *Extractor) ExtractResourcesProductionsFromDoc(doc *goquery.Document) (o
 
 // ExtractPreferencesFromDoc ...
 func (e *Extractor) ExtractPreferencesFromDoc(doc *goquery.Document) ogame.Preferences {
-	return extractPreferencesFromDoc(doc)
+	return ExtractPreferencesFromDoc(doc)
 }
 
 // ExtractResourceSettingsFromDoc ...
@@ -744,6 +744,11 @@ func (e *Extractor) ExtractGeologistFromDoc(doc *goquery.Document) bool {
 // ExtractTechnocratFromDoc ...
 func (e *Extractor) ExtractTechnocratFromDoc(doc *goquery.Document) bool {
 	return extractTechnocratFromDoc(doc)
+}
+
+// ExtractColoniesFromDoc ...
+func (e *Extractor) ExtractColoniesFromDoc(doc *goquery.Document) (int64, int64) {
+	return extractColoniesFromDoc(doc)
 }
 
 // ExtractAbandonInformation ...

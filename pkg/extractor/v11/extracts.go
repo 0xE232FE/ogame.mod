@@ -314,6 +314,16 @@ func extractJumpGate(pageHTML []byte) (ogame.ShipsInfos, string, []ogame.MoonID,
 	return ships, token, destinations, 0
 }
 
+func extractPreferencesFromDoc(doc *goquery.Document) ogame.Preferences {
+	prefs := v6.ExtractPreferencesFromDoc(doc)
+	prefs.Language = extractLanguageFromDoc(doc)
+	return prefs
+}
+
+func extractLanguageFromDoc(doc *goquery.Document) string {
+	return doc.Find("select[name=language] option[selected]").AttrOr("value", "en")
+}
+
 func extractBuffActivationFromDoc(doc *goquery.Document) (token string, items []ogame.Item, err error) {
 	scriptTxt := doc.Find("script").Text()
 	r := regexp.MustCompile(`token = "([^"]+)"`)

@@ -104,6 +104,8 @@ type OGame struct {
 	hasTechnocrat         bool
 	captchaCallback       solvers.CaptchaCallback
 	device                *device.Device
+	coloniesCount         int64
+	coloniesPossible      int64
 }
 
 // Params parameters for more fine-grained initialization
@@ -267,7 +269,7 @@ func (b *OGame) execInterceptorCallbacks(method, url string, params, payload url
 }
 
 // V11 IntroBypass
-func (b *OGame) introBypass(page parser.OverviewPage) error {
+func (b *OGame) introBypass(page *parser.OverviewPage) error {
 	if bytes.Contains(page.GetContent(), []byte(`currentPage = "intro";`)) {
 		b.debug("bypassing intro page")
 		vals := url.Values{
@@ -421,13 +423,18 @@ func (b *OGame) cacheFullPageInfo(page parser.IFullPage) {
 	b.hasEngineer = page.ExtractEngineer()
 	b.hasGeologist = page.ExtractGeologist()
 	b.hasTechnocrat = page.ExtractTechnocrat()
+	b.coloniesCount, b.coloniesPossible = page.ExtractColonies()
 
 	switch castedPage := page.(type) {
-	case parser.OverviewPage:
-		b.Player, _ = castedPage.ExtractUserInfos()
-	case parser.PreferencesPage:
+	case *parser.OverviewPage:
+		var err error
+		b.Player, err = castedPage.ExtractUserInfos()
+		if err != nil {
+			b.error(err)
+		}
+	case *parser.PreferencesPage:
 		b.CachedPreferences = castedPage.ExtractPreferences()
-	case parser.ResearchPage:
+	case *parser.ResearchPage:
 		researches := castedPage.ExtractResearch()
 		b.researches = &researches
 	}
@@ -1193,7 +1200,7 @@ func (b *OGame) pageContent(method string, vals, payload url.Values, opts ...Opt
 		return []byte{}, err
 	}
 
-	if err := processResponseHTML(method, b, pageHTMLBytes, page, payload, vals); err != nil {
+	if err := processResponseHTML(method, b, pageHTMLBytes, page, payload, vals, cfg.SkipCacheFullPage); err != nil {
 		return []byte{}, err
 	}
 
@@ -1226,12 +1233,14 @@ func alterPayload(method string, b *OGame, vals, payload url.Values) {
 	}
 }
 
-func processResponseHTML(method string, b *OGame, pageHTML []byte, page string, payload, vals url.Values) error {
+func processResponseHTML(method string, b *OGame, pageHTML []byte, page string, payload, vals url.Values, SkipCacheFullPage bool) error {
 	switch method {
 	case http.MethodGet:
 		if !IsAjaxPage(vals) && !IsEmpirePage(vals) && v6.IsLogged(pageHTML) {
-			parsedFullPage := parser.AutoParseFullPage(b.extractor, pageHTML)
-			b.cacheFullPageInfo(parsedFullPage)
+			if !SkipCacheFullPage {
+				parsedFullPage := parser.AutoParseFullPage(b.extractor, pageHTML)
+				b.cacheFullPageInfo(parsedFullPage)
+			}
 		}
 
 	case http.MethodPost:
@@ -1459,6 +1468,7 @@ func (b *OGame) setPreferences(p ogame.Preferences) error {
 	payload.Set("settings_order", utils.FI64(p.SortOrder))
 	payload.Set("spio_anz", utils.FI64(p.SpioAnz))
 	payload.Set("eventsShow", utils.FI64(p.EventsShow))
+	payload.Set("language", p.Language)
 
 	_, err = b.postPageContent(vals, payload)
 	return err
