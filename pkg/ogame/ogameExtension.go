@@ -75,7 +75,7 @@ func (r *ResourcesDetails) AvailableResIn(res Resources) (time.Duration, string,
 		maxProduction = deuteriumProduction
 	}
 
-	return maxDuration + (3 * time.Second), maxResourcesName, maxNeededResources, maxProduction
+	return maxDuration, maxResourcesName, maxNeededResources, maxProduction
 }
 
 // AvailableIn returns the resources available
