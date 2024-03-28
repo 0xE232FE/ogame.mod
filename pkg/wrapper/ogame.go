@@ -1481,6 +1481,10 @@ func (b *OGame) setPreferences(p ogame.Preferences) error {
 	setValue(p.PreserveSystemOnPlanetChange, "preserveSystemOnPlanetChange", "1")
 	setValue(p.DisableOutlawWarning, "disableOutlawWarning", "on")
 	setValue(p.DiscoveryWarningEnabled, "discoveryWarningEnabled", "1")
+	setValue(p.PlayerIntroductionIsVeteran, "playerIntroductionIsVeteran", "1")
+	setValue(p.PlayerIntroductionHideHighlights, "playerIntroductionHideHighlights", "1")
+	setValue(p.PlayerIntroductionHidePanel, "playerIntroductionHidePanel", "1")
+
 	payload.Set("msgResultsPerPage", utils.FI64(p.MsgResultsPerPage))
 	payload.Set("spySystemAutomaticQuantity", utils.FI64(p.SpySystemAutomaticQuantity))
 	payload.Set("spySystemTargetPlanetTypes", utils.FI64(p.SpySystemTargetPlanetTypes))
