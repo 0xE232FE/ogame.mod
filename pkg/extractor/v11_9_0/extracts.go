@@ -3,6 +3,7 @@ package v11_9_0
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -16,7 +17,7 @@ import (
 
 func extractProductionFromDoc(doc *goquery.Document) ([]ogame.Quantifiable, error) {
 	res := make([]ogame.Quantifiable, 0)
-	active := doc.Find("table.construction")
+	active := doc.Find("div.productionBoxShips  table.construction")
 	href, _ := active.Find("td a").Attr("href")
 	m := regexp.MustCompile(`openTech=(\d+)`).FindStringSubmatch(href)
 	if len(m) == 0 {
@@ -26,7 +27,7 @@ func extractProductionFromDoc(doc *goquery.Document) ([]ogame.Quantifiable, erro
 	activeID := ogame.ID(idInt)
 	activeNbr := utils.DoParseI64(active.Find("div.shipSumCount").Text())
 	res = append(res, ogame.Quantifiable{ID: activeID, Nbr: activeNbr})
-	doc.Find("table.queue td").Each(func(i int, s *goquery.Selection) {
+	doc.Find("div.productionBoxShips  table.queue td").Each(func(i int, s *goquery.Selection) {
 		link := s.Find("img")
 		alt := link.AttrOr("alt", "")
 		var itemID ogame.ID
@@ -41,6 +42,16 @@ func extractProductionFromDoc(doc *goquery.Document) ([]ogame.Quantifiable, erro
 		}
 	})
 	return res, nil
+}
+
+func extractOverviewShipSumCountdownFromBytes(pageHTML []byte) int64 {
+	var shipSumCountdown int64
+	shipSumCountdownMatch := regexp.MustCompile(`new CountdownTimer\('shipyardCountdown', (\d+),`).FindSubmatch(pageHTML)
+	if len(shipSumCountdownMatch) > 0 {
+		shipSumCountdown = int64(utils.ToInt(shipSumCountdownMatch[1]))
+	}
+	log.Printf("Ship Countdown: %d", shipSumCountdown)
+	return shipSumCountdown
 }
 
 func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatReportSummary, int64, error) {

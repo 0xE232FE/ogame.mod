@@ -22,14 +22,19 @@ func NewExtractor() *Extractor {
 // ExtractProduction extracts ships/defenses production from the shipyard page
 func (e *Extractor) ExtractProduction(pageHTML []byte) ([]ogame.Quantifiable, int64, error) {
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
-	shipSumCountdown := e.ExtractOverviewShipSumCountdownFromBytes(pageHTML)
-	production, err := e.ExtractProductionFromDoc(doc)
+	shipSumCountdown := extractOverviewShipSumCountdownFromBytes(pageHTML)
+	production, err := extractProductionFromDoc(doc)
 	return production, shipSumCountdown, err
 }
 
 // ExtractProductionFromDoc extracts ships/defenses production from the shipyard page
 func (e *Extractor) ExtractProductionFromDoc(doc *goquery.Document) ([]ogame.Quantifiable, error) {
 	return extractProductionFromDoc(doc)
+}
+
+// ExtractOverviewShipSumCountdownFromBytes extracts production countdown
+func (e *Extractor) ExtractOverviewShipSumCountdownFromBytes(pageHTML []byte) int64 {
+	return extractOverviewShipSumCountdownFromBytes(pageHTML)
 }
 
 // ExtractCombatReportMessagesSummary ...
