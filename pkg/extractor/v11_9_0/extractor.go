@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/alaingilbert/clockwork"
 	v11 "github.com/alaingilbert/ogame/pkg/extractor/v11"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 )
@@ -46,4 +47,9 @@ func (e *Extractor) ExtractCombatReportMessagesFromDoc(doc *goquery.Document) ([
 func (e *Extractor) ExtractAuction(pageHTML []byte) (ogame.Auction, error) {
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	return extractAuctionFromDoc(doc)
+}
+
+// ExtractConstructions ...
+func (e *Extractor) ExtractConstructions(pageHTML []byte) (buildingID ogame.ID, buildingCountdown int64, researchID ogame.ID, researchCountdown int64, lfBuildingID ogame.ID, lfBuildingCountdown int64, lfResearchID ogame.ID, lfResearchCountdown int64) {
+	return extractConstructions(pageHTML, clockwork.NewRealClock())
 }

@@ -1,6 +1,7 @@
 package v11_9_0
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"regexp"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/alaingilbert/clockwork"
 	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/utils"
@@ -178,4 +180,40 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 	// bid = max(auction.DeficitBid, auction.MinimumBid - auction.AlreadyBid)
 
 	return auction, nil
+}
+
+func extractConstructions(pageHTML []byte, clock clockwork.Clock) (buildingID ogame.ID, buildingCountdown int64,
+	researchID ogame.ID, researchCountdown int64,
+	lfBuildingID ogame.ID, lfBuildingCountdown int64,
+	lfResearchID ogame.ID, lfResearchCountdown int64) {
+
+	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+
+	buildingCountdownMatch, ok := doc.Find(".buildingCountdown").Attr("data-end")
+	if ok {
+		buildingCountdown = utils.ParseInt(buildingCountdownMatch) - clock.Now().Unix()
+		buildingIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancelbuilding\((\d+),`).FindSubmatch(pageHTML)[1])
+		buildingID = ogame.ID(buildingIDInt)
+	}
+	researchCountdownMatch, ok := doc.Find(".researchCountdown").Attr("data-end")
+	if ok {
+		researchCountdown = utils.ParseInt(researchCountdownMatch) - clock.Now().Unix()
+		researchIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancelresearch\((\d+),`).FindSubmatch(pageHTML)[1])
+		researchID = ogame.ID(researchIDInt)
+	}
+
+	lfBuildingCountdownMatch, ok := doc.Find(".lfbuildingCountdown").Attr("data-end")
+	if ok {
+		lfBuildingCountdown = utils.ParseInt(lfBuildingCountdownMatch) - clock.Now().Unix()
+		lfBuildingIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancellfbuilding\((\d+),`).FindSubmatch(pageHTML)[1])
+		lfBuildingID = ogame.ID(lfBuildingIDInt)
+	}
+
+	lfResearchCountdownMatch, ok := doc.Find(".lfresearchCountdown").Attr("data-end")
+	if ok {
+		lfBuildingCountdown = utils.ParseInt(lfResearchCountdownMatch) - clock.Now().Unix()
+		lfResearchIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancellfbuilding\((\d+),`).FindSubmatch(pageHTML)[1])
+		lfResearchID = ogame.ID(lfResearchIDInt)
+	}
+	return
 }
