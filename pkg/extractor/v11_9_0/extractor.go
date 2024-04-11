@@ -2,6 +2,7 @@ package v11_9_0
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/alaingilbert/clockwork"
@@ -57,4 +58,14 @@ func (e *Extractor) ExtractAuction(pageHTML []byte) (ogame.Auction, error) {
 // ExtractConstructions ...
 func (e *Extractor) ExtractConstructions(pageHTML []byte) (buildingID ogame.ID, buildingCountdown int64, researchID ogame.ID, researchCountdown int64, lfBuildingID ogame.ID, lfBuildingCountdown int64, lfResearchID ogame.ID, lfResearchCountdown int64) {
 	return extractConstructions(pageHTML, clockwork.NewRealClock())
+}
+
+// ExtractFleets ...
+func (e *Extractor) ExtractFleets(pageHTML []byte) (res []ogame.Fleet) {
+	return e.extractFleets(pageHTML, e.GetLocation())
+}
+
+func (e *Extractor) extractFleets(pageHTML []byte, location *time.Location) (res []ogame.Fleet) {
+	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	return extractFleetsFromDoc(doc, location, e.GetLifeformEnabled())
 }
