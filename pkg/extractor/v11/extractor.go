@@ -2,6 +2,7 @@ package v11
 
 import (
 	"bytes"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/alaingilbert/clockwork"
@@ -45,4 +46,23 @@ func (e *Extractor) ExtractProductionFromDoc(doc *goquery.Document) ([]ogame.Qua
 // ExtractOverviewShipSumCountdownFromBytes extracts production countdown
 func (e *Extractor) ExtractOverviewShipSumCountdownFromBytes(pageHTML []byte) int64 {
 	return extractOverviewShipSumCountdownFromBytes(pageHTML)
+}
+
+// ExtractFleets ...
+func (e *Extractor) ExtractFleets(pageHTML []byte) (res []ogame.Fleet) {
+	return e.extractFleets(pageHTML, e.GetLocation())
+}
+
+func (e *Extractor) extractFleets(pageHTML []byte, location *time.Location) (res []ogame.Fleet) {
+	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	return extractFleetsFromDoc(doc, location, e.GetLifeformEnabled())
+}
+
+// ExtractFleetsFromDoc ...
+func (e *Extractor) ExtractFleetsFromDoc(doc *goquery.Document) (res []ogame.Fleet) {
+	return e.extractFleetsFromDoc(doc, e.GetLocation())
+}
+
+func (e *Extractor) extractFleetsFromDoc(doc *goquery.Document, location *time.Location) (res []ogame.Fleet) {
+	return extractFleetsFromDoc(doc, location, e.GetLifeformEnabled())
 }
