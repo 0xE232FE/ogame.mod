@@ -183,6 +183,7 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 }
 
 func extractConstructions(pageHTML []byte, clock clockwork.Clock) (buildingID ogame.ID, buildingCountdown int64,
+	// OGame Version as of 11.13.0
 	researchID ogame.ID, researchCountdown int64,
 	lfBuildingID ogame.ID, lfBuildingCountdown int64,
 	lfResearchID ogame.ID, lfResearchCountdown int64) {
@@ -211,7 +212,7 @@ func extractConstructions(pageHTML []byte, clock clockwork.Clock) (buildingID og
 
 	lfResearchCountdownMatch, ok := doc.Find(".lfresearchCountdown").Attr("data-end")
 	if ok {
-		lfBuildingCountdown = utils.ParseInt(lfResearchCountdownMatch) - clock.Now().Unix()
+		lfResearchCountdown = utils.ParseInt(lfResearchCountdownMatch) - clock.Now().Unix()
 		lfResearchIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancellfbuilding\((\d+),`).FindSubmatch(pageHTML)[1])
 		lfResearchID = ogame.ID(lfResearchIDInt)
 	}
