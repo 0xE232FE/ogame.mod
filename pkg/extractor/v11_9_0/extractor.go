@@ -69,3 +69,12 @@ func (e *Extractor) extractFleets(pageHTML []byte, location *time.Location) (res
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	return extractFleetsFromDoc(doc, location, e.GetLifeformEnabled())
 }
+
+// ExtractFleetsFromDoc ...
+func (e *Extractor) ExtractFleetsFromDoc(doc *goquery.Document) (res []ogame.Fleet) {
+	return e.extractFleetsFromDoc(doc, e.GetLocation())
+}
+
+func (e *Extractor) extractFleetsFromDoc(doc *goquery.Document, location *time.Location) (res []ogame.Fleet) {
+	return extractFleetsFromDoc(doc, location, e.GetLifeformEnabled())
+}
