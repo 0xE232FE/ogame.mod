@@ -50,6 +50,7 @@ type DefensesPage struct{ FullPage }
 type MovementPage struct{ FullPage }
 type LfBuildingsPage struct{ FullPage }
 type LfResearchPage struct{ FullPage }
+type Exodus struct{ FullPage }
 
 type FullPagePages interface {
 	OverviewPage |
@@ -65,16 +66,17 @@ type FullPagePages interface {
 		ShipyardPage |
 		DefensesPage |
 		//FleetDispatchPageContent |
-		MovementPage
-	//GalaxyPageContent |
-	//AlliancePageContent |
-	//PremiumPageContent |
-	//ShopPageContent |
-	//MessagesPageContent |
-	//ChatPageContent |
-	//CharacterClassSelectionPageContent |
-	//BuddiesPageContent |
-	//HighScorePageContent
+		MovementPage |
+		//GalaxyPageContent |
+		//AlliancePageContent |
+		//PremiumPageContent |
+		//ShopPageContent |
+		//MessagesPageContent |
+		//ChatPageContent |
+		//CharacterClassSelectionPageContent |
+		//BuddiesPageContent |
+		//HighScorePageContent
+		Exodus
 }
 
 type AjaxPagePages interface {
