@@ -64,6 +64,7 @@ type Prioritizable interface {
 	FlightTime(origin, destination ogame.Coordinate, speed ogame.Speed, ships ogame.ShipsInfos, mission ogame.MissionID) (secs, fuel int64)
 	GalaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemInfos, error)
 	GetActiveItems(ogame.CelestialID) ([]ogame.ActiveItem, error)
+	GetAllianceClass() ogame.AllianceClass
 	GetAllResources() (map[ogame.CelestialID]ogame.Resources, error)
 	GetAttacks(...Option) ([]ogame.AttackEvent, error)
 	GetAuction() (ogame.Auction, error)

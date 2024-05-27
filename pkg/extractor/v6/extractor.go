@@ -869,6 +869,16 @@ func (e *Extractor) ExtractAuction(pageHTML []byte) (ogame.Auction, error) {
 	return extractAuctionFromDoc(doc)
 }
 
+// ExtractAllianceClass ...
+func (e *Extractor) ExtractAllianceClass(pageHTML []byte) ogame.AllianceClass {
+	panic("not implemented")
+}
+
+// ExtractAllianceClassFromDoc ...
+func (e *Extractor) ExtractAllianceClassFromDoc(doc *goquery.Document) ogame.AllianceClass {
+	panic("not implemented")
+}
+
 // ExtractHighscore ...
 func (e *Extractor) ExtractHighscore(pageHTML []byte) (ogame.Highscore, error) {
 	panic("not implemented")

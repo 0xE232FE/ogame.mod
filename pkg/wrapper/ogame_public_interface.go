@@ -2,14 +2,15 @@ package wrapper
 
 import (
 	"crypto/tls"
+	"net/http"
+	"net/url"
+	"time"
+
 	"github.com/alaingilbert/ogame/pkg/device"
 	"github.com/alaingilbert/ogame/pkg/gameforge"
 	"github.com/alaingilbert/ogame/pkg/httpclient"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/taskRunner"
-	"net/http"
-	"net/url"
-	"time"
 )
 
 // Public interface -----------------------------------------------------------
@@ -712,6 +713,11 @@ func (b *OGame) CharacterClass() ogame.CharacterClass {
 // CountColonies returns colonies count/possible
 func (b *OGame) CountColonies() (int64, int64) {
 	return b.coloniesCount, b.coloniesPossible
+}
+
+// AllianceClass returns the bot alliance class
+func (b *OGame) GetAllianceClass() ogame.AllianceClass {
+	return b.WithPriority(taskRunner.Normal).GetAllianceClass()
 }
 
 // GetAuction ...

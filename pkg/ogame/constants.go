@@ -98,7 +98,71 @@ func (c CharacterClass) IsDiscoverer() bool {
 	return c == Discoverer
 }
 
+type ExpeditionResult int64
+
+// Lifeform bonuses ...
+type LfBonusID int64
+
 type LifeformClass int64
+
+func (l LfBonusID) String() string {
+	switch l {
+	case MetalProductionBonusID:
+		return "MetalProductionBonus"
+	case CrystalProductionBonusID:
+		return "CrystalProductionBonus"
+	case DeuteriumProductionBonusID:
+		return "DeuteriumProductionBonus"
+	case PopulationGrowthBonusID:
+		return "PopulationGrowthBonus"
+	case FoodProductionBonusID:
+		return "FoodProductionBonus"
+	case MetalDenCapacityID:
+		return "MetalDenCapacity"
+	case EnergyBoostersID:
+		return "EnergyBoosters"
+	case CrawlerBonusID:
+		return "CrawlerBonus"
+	case CharacterClassBonusID:
+		return "Characterclass Bonus"
+	case ResearchTimeReductionID:
+		return "ResearchTimeReduction"
+	case DeuteriumConsumptionBonusID:
+		return "DeuteriumConsumptionBonus"
+	case FleetRecallDeuteriumRefundBonusID:
+		return "FleetRecallDeuteriumRefundBonus"
+	case ExpeditionShipBonusID:
+		return "ExpeditionShipBonus"
+	case ExpeditionResourceBonusID:
+		return "ExpeditionResourceBonus"
+	case PhalanxRangeBonusID:
+		return "PhalanxRangeBonus"
+	case ExpeditionSpeedID:
+		return "ExpeditionSpeed"
+	case ExpeditionDarkMatterBonusID:
+		return "ExpeditionDarkMatterBonus"
+	case ExpeditionFleetLossChanceID:
+		return "ExpeditionFleetLossChance"
+	case ExplorationFlightDurationBonusID:
+		return "ExplorationFlightDurationBonus"
+	case CrystalDenCapacityID:
+		return "CrystalDenCapacity"
+	case DeuteriumDenCapacityID:
+		return "DeuteriumDenCapacity"
+	case MoonSizeID:
+		return "MoonSize"
+	case MoonChanceID:
+		return "MoonChance"
+	case ShipStatsBonusID:
+		return "ShipStatsBonus"
+	case ResearchCostReductionID:
+		return "ResearchCostReduction"
+	case SpaceDockImprovementID:
+		return "SpaceDockImprovement"
+	default:
+		return strconv.FormatInt(int64(l), 10)
+	}
+}
 
 func (c LifeformClass) IsHuman() bool {
 	return c == HumanClass
@@ -360,4 +424,46 @@ const (
 	SeventyFivePercent Speed = 7.5
 	EightyFivePercent  Speed = 8.5
 	NinetyFivePercent  Speed = 9.5
+
+	// Lifeform bonuses
+	MetalProductionBonusID            LfBonusID = 1
+	CrystalProductionBonusID          LfBonusID = 2
+	DeuteriumProductionBonusID        LfBonusID = 3
+	PopulationGrowthBonusID           LfBonusID = 4
+	FoodProductionBonusID             LfBonusID = 5
+	MetalDenCapacityID                LfBonusID = 6
+	EnergyBoostersID                  LfBonusID = 8
+	CrawlerBonusID                    LfBonusID = 9
+	CharacterClassBonusID             LfBonusID = 10
+	ResearchTimeReductionID           LfBonusID = 11
+	DeuteriumConsumptionBonusID       LfBonusID = 13
+	FleetRecallDeuteriumRefundBonusID LfBonusID = 14
+	ExpeditionShipBonusID             LfBonusID = 15
+	ExpeditionResourceBonusID         LfBonusID = 16
+	PhalanxRangeBonusID               LfBonusID = 17
+	ExpeditionSpeedID                 LfBonusID = 18
+	ExpeditionDarkMatterBonusID       LfBonusID = 19
+	ExpeditionFleetLossChanceID       LfBonusID = 20
+	ExplorationFlightDurationBonusID  LfBonusID = 21
+	CrystalDenCapacityID              LfBonusID = 23
+	DeuteriumDenCapacityID            LfBonusID = 24
+	MoonSizeID                        LfBonusID = 25
+	MoonChanceID                      LfBonusID = 26
+	ShipStatsBonusID                  LfBonusID = 27
+	ResearchCostReductionID           LfBonusID = 28
+	SpaceDockImprovementID            LfBonusID = 29
+
+	// Expedition results
+	ExpeditionResultUnknown    ExpeditionResult = 0
+	ExpeditionResultNothing    ExpeditionResult = 1
+	ExpeditionResultResources  ExpeditionResult = 2
+	ExpeditionResultShips      ExpeditionResult = 3
+	ExpeditionResuldDarkmatter ExpeditionResult = 4
+	ExpeditionResultEarly      ExpeditionResult = 5
+	ExpeditionResultLate       ExpeditionResult = 6
+	ExpeditionResultPirates    ExpeditionResult = 7
+	ExpeditionResultAliens     ExpeditionResult = 8
+	ExpeditionResultTrader     ExpeditionResult = 9
+	ExpeditionResultBlackHole  ExpeditionResult = 10
+	ExpeditionResultItem       ExpeditionResult = 11
 )

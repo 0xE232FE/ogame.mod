@@ -1,11 +1,12 @@
 package wrapper
 
 import (
-	"github.com/alaingilbert/ogame/pkg/utils"
 	"net/http"
 	"net/url"
 	"sync/atomic"
 	"time"
+
+	"github.com/alaingilbert/ogame/pkg/utils"
 
 	"github.com/alaingilbert/ogame/pkg/ogame"
 )
@@ -668,6 +669,13 @@ func (b *Prioritize) DoAuction(bid map[ogame.CelestialID]ogame.Resources) error 
 	b.begin("DoAuction")
 	defer b.done()
 	return b.bot.doAuction(ogame.CelestialID(0), bid)
+}
+
+// GetAllianceClass
+func (b *Prioritize) GetAllianceClass() ogame.AllianceClass {
+	b.begin("GetAllianceClass")
+	defer b.done()
+	return b.bot.getAllianceClass()
 }
 
 // Highscore ...

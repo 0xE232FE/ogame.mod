@@ -383,6 +383,19 @@ type ResourcesSettingsExtractorBytesDoc interface {
 	ResourcesSettingsExtractorDoc
 }
 
+type ExtractAllianceClassBytes interface {
+	ExtractAllianceClass(pageHTML []byte) ogame.AllianceClass
+}
+
+type ExtractAllianceClassDoc interface {
+	ExtractAllianceClassFromDoc(doc *goquery.Document) ogame.AllianceClass
+}
+
+type AllianceClassExtractorBytesDoc interface {
+	ExtractAllianceClassBytes
+	ExtractAllianceClassDoc
+}
+
 type HighscoreExtractorBytes interface {
 	ExtractHighscore(pageHTML []byte) (ogame.Highscore, error)
 }
@@ -495,6 +508,7 @@ type Extractor interface {
 	GetLifeformEnabled() bool
 	SetLifeformEnabled(lifeformEnabled bool)
 
+	AllianceClassExtractorBytesDoc
 	DefensesExtractorBytesDoc
 	EspionageReportExtractorBytesDoc
 	EventListExtractorBytesDoc
