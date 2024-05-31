@@ -3566,28 +3566,11 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifia
 }
 
 func (b *OGame) getPageMessages(page int64, tabid ogame.MessagesTabID) ([]byte, error) {
-	if b.IsVGreaterThanOrEqual("11.14.0-beta9") {
-		vals := url.Values{
-			"page":      {"componentOnly"},
-			"component": {"messages"},
-			"asJson":    {"1"},
-			"action":    {"getMessagesList"},
-		}
-		payload := url.Values{
-			"showTrash":    {"false"},
-			"activeSubTab": {utils.FI64(tabid)},
-		}
-		return b.postPageContent(vals, payload)
-	} else {
-		payload := url.Values{
-			"messageId":  {"-1"},
-			"tabid":      {utils.FI64(tabid)},
-			"action":     {"107"},
-			"pagination": {utils.FI64(page)},
-			"ajax":       {"1"},
-		}
-		return b.postPageContent(url.Values{"page": {"messages"}}, payload)
+	payload := url.Values{
+		"activeSubTab": {utils.FI64(tabid)},
+		"showTrash":    {"false"},
 	}
+	return b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"messages"}, "asJson": {"1"}, "action": {"getMessagesList"}}, payload)
 }
 
 func (b *OGame) getEspionageReportMessages(maxPage int64) ([]ogame.EspionageReportSummary, error) {
@@ -3603,46 +3586,23 @@ func (b *OGame) getExpeditionMessages(maxPage int64) ([]ogame.ExpeditionMessage,
 }
 
 func getMessages[T any](b *OGame, maxPage int64, tabID ogame.MessagesTabID, extractor func([]byte) ([]T, int64, error)) ([]T, error) {
-	if b.IsVGreaterThanOrEqual("11.14.0-beta9") {
-		pageHTML, _ := b.getPageMessages(0, tabID)
-		var res struct {
-			ServerLang   string `json:"js_serverlang"`
-			ServerID     string `json:"js_serverid"`
-			Status       string `json:"status"`
-			Messages     []any  `json:"messages"`
-			Components   []any  `json:"components"`
-			NewAjaxToken string `json:"newAjaxToken"`
-		}
-		json.Unmarshal(pageHTML, &res)
-		msgs := make([]T, 0)
-		for _, m := range res.Messages {
-			doc := ([]byte)(m.(string))
-			newMessage, fakePage, _ := extractor(doc)
-			if fakePage != 0 {
-				return msgs, errors.New("fakePage is not 0")
-			}
-			msgs = append(msgs, newMessage...)
-		}
-		return msgs, nil
-	} else {
-		var page int64 = 1
-		var nbPage int64 = 1
-		msgs := make([]T, 0)
-		for page <= nbPage {
-			if maxPage >= 1 && page > maxPage {
-				break
-			}
-			if page > 1 {
-				time.Sleep(utils.RandMs(500, 1500))
-			}
-			pageHTML, _ := b.getPageMessages(page, tabID)
-			newMessages, newNbPage, _ := extractor(pageHTML)
-			msgs = append(msgs, newMessages...)
-			nbPage = newNbPage
-			page++
-		}
-		return msgs, nil
+	var res struct {
+		ServerLang   string `json:"js_serverlang"`
+		ServerID     string `json:"js_serverid"`
+		Status       string `json:"status"`
+		Messages     []any  `json:"messages"`
+		Components   []any  `json:"components"`
+		NewAjaxToken string `json:"newAjaxToken"`
 	}
+	pageHTML, _ := b.getPageMessages(1, tabID)
+	_ = json.Unmarshal(pageHTML, &res)
+	msgs := make([]T, 0)
+	for _, m := range res.Messages {
+		doc := ([]byte)(m.(string))
+		newMessage, _, _ := extractor(doc)
+		msgs = append(msgs, newMessage...)
+	}
+	return msgs, nil
 }
 
 func (b *OGame) collectAllMarketplaceMessages() error {
@@ -3711,46 +3671,28 @@ func (b *OGame) getMarketplaceMessages(maxPage int64, tabID ogame.MessagesTabID)
 }
 
 func (b *OGame) getExpeditionMessageAt(t time.Time) (ogame.ExpeditionMessage, error) {
-	if b.IsVGreaterThanOrEqual("11.14.0-beta9") {
-		pageHTML, err := b.getPageMessages(0, ExpeditionsMessagesTabID)
-		if err != nil {
-			return ogame.ExpeditionMessage{}, err
+	pageHTML, _ := b.getPageMessages(1, ExpeditionsMessagesTabID)
+	var res struct {
+		ServerLang   string `json:"js_serverlang"`
+		ServerID     string `json:"js_serverid"`
+		Status       string `json:"status"`
+		Messages     []any  `json:"messages"`
+		Components   []any  `json:"components"`
+		NewAjaxToken string `json:"newAjaxToken"`
+	}
+	_ = json.Unmarshal(pageHTML, &res)
+	newMessages := make([]ogame.ExpeditionMessage, 0)
+	for _, m := range res.Messages {
+		doc := ([]byte)(m.(string))
+		newMessage, _, _ := b.extractor.ExtractExpeditionMessages(doc)
+		newMessages = append(newMessages, newMessage...)
+	}
+	for _, m := range newMessages {
+		if m.CreatedAt.Unix() == t.Unix() {
+			return m, nil
 		}
-		messages, fakePage, err := b.extractor.ExtractExpeditionMessages(pageHTML)
-		if fakePage != 0 {
-			return ogame.ExpeditionMessage{}, errors.New("fakePage is not 0")
-		}
-		for _, m := range messages {
-			if m.CreatedAt.Unix() == t.Unix() {
-				return m, nil
-			}
-			if m.CreatedAt.Unix() < t.Unix() {
-				break
-			}
-		}
-	} else {
-		var page int64 = 1
-		var nbPage int64 = 1
-	LOOP:
-		for page <= nbPage {
-			if page > 1 {
-				time.Sleep(utils.RandMs(500, 1500))
-			}
-			pageHTML, err := b.getPageMessages(page, ExpeditionsMessagesTabID)
-			if err != nil {
-				return ogame.ExpeditionMessage{}, err
-			}
-			newMessages, newNbPage, err := b.extractor.ExtractExpeditionMessages(pageHTML)
-			for _, m := range newMessages {
-				if m.CreatedAt.Unix() == t.Unix() {
-					return m, nil
-				}
-				if m.CreatedAt.Unix() < t.Unix() {
-					break LOOP
-				}
-			}
-			nbPage = newNbPage
-			page++
+		if m.CreatedAt.Unix() < t.Unix() {
+			break
 		}
 	}
 
@@ -3758,109 +3700,78 @@ func (b *OGame) getExpeditionMessageAt(t time.Time) (ogame.ExpeditionMessage, er
 }
 
 func (b *OGame) getCombatReportFor(coord ogame.Coordinate) (ogame.CombatReportSummary, error) {
-	if b.IsVGreaterThanOrEqual("11.14.0-beta9") {
-		pageHTML, err := b.getPageMessages(0, CombatReportsMessagesTabID)
-		if err != nil {
-			return ogame.CombatReportSummary{}, err
-		}
-		messages, fakePage, _ := b.extractor.ExtractCombatReportMessagesSummary(pageHTML)
-		if fakePage != 0 {
-			return ogame.CombatReportSummary{}, errors.New("fakePage is not 0")
-		}
-		for _, m := range messages {
-			if m.Destination.Equal(coord) {
-				return m, nil
-			}
-		}
-	} else {
-		var page int64 = 1
-		var nbPage int64 = 1
-		for page <= nbPage {
-			if page > 1 {
-				time.Sleep(utils.RandMs(500, 1500))
-			}
-			pageHTML, err := b.getPageMessages(page, CombatReportsMessagesTabID)
-			if err != nil {
-				return ogame.CombatReportSummary{}, err
-			}
-			newMessages, newNbPage, _ := b.extractor.ExtractCombatReportMessagesSummary(pageHTML)
-			for _, m := range newMessages {
-				if m.Destination.Equal(coord) {
-					return m, nil
-				}
-			}
-			nbPage = newNbPage
-			page++
+	pageHTML, err := b.getPageMessages(1, CombatReportsMessagesTabID)
+	if err != nil {
+		return ogame.CombatReportSummary{}, err
+	}
+	var res struct {
+		ServerLang   string `json:"js_serverlang"`
+		ServerID     string `json:"js_serverid"`
+		Status       string `json:"status"`
+		Messages     []any  `json:"messages"`
+		Components   []any  `json:"components"`
+		NewAjaxToken string `json:"newAjaxToken"`
+	}
+	_ = json.Unmarshal(pageHTML, &res)
+	newMessages := make([]ogame.CombatReportSummary, 0)
+	for _, m := range res.Messages {
+		doc := ([]byte)(m.(string))
+		newMessage, _, _ := b.extractor.ExtractCombatReportMessagesSummary(doc)
+		newMessages = append(newMessages, newMessage...)
+	}
+	for _, m := range newMessages {
+		if m.Destination.Equal(coord) {
+			return m, nil
 		}
 	}
 	return ogame.CombatReportSummary{}, errors.New("combat report not found for " + coord.String())
 }
 
 func (b *OGame) getEspionageReport(msgID int64) (ogame.EspionageReport, error) {
-	if b.IsVGreaterThanOrEqual("11.14.0-beta9") {
-		pageHTML, _ := b.getPageContent(url.Values{"page": {"componentOnly"}, "component": {"messagedetails"}, "messageId": {utils.FI64(msgID)}})
-		return b.extractor.ExtractEspionageReport(pageHTML)
-	} else {
-		pageHTML, _ := b.getPageContent(url.Values{"page": {"messages"}, "messageId": {utils.FI64(msgID)}, "tabid": {"20"}, "ajax": {"1"}})
-		return b.extractor.ExtractEspionageReport(pageHTML)
-	}
+	pageHTML, _ := b.getPageContent(url.Values{"page": {"componentOnly"}, "component": {"messagedetails"}, "messageId": {utils.FI64(msgID)}})
+	return b.extractor.ExtractEspionageReport(pageHTML)
 }
 
 func (b *OGame) getEspionageReportFor(coord ogame.Coordinate) (ogame.EspionageReport, error) {
-	if b.IsVGreaterThanOrEqual("11.14.0-beta9") {
-		pageHTML, err := b.getPageMessages(0, EspionageMessagesTabID)
-		if err != nil {
-			return ogame.EspionageReport{}, err
-		}
-		messages, fakePage, _ := b.extractor.ExtractEspionageReportMessageIDs(pageHTML)
-		if fakePage != 0 {
-			return ogame.EspionageReport{}, errors.New("fakePage is not 0")
-		}
-		for _, m := range messages {
-			if m.Target.Equal(coord) {
-				return b.getEspionageReport(m.ID)
-			}
-		}
-	} else {
-		var page int64 = 1
-		var nbPage int64 = 1
-		for page <= nbPage {
-			if page > 1 {
-				time.Sleep(utils.RandMs(500, 1500))
-			}
-			pageHTML, err := b.getPageMessages(page, EspionageMessagesTabID)
-			if err != nil {
-				return ogame.EspionageReport{}, err
-			}
-			newMessages, newNbPage, _ := b.extractor.ExtractEspionageReportMessageIDs(pageHTML)
-			for _, m := range newMessages {
-				if m.Target.Equal(coord) {
-					return b.getEspionageReport(m.ID)
-				}
-			}
-			nbPage = newNbPage
-			page++
+	pageHTML, err := b.getPageMessages(1, EspionageMessagesTabID)
+	if err != nil {
+		return ogame.EspionageReport{}, err
+	}
+	var res struct {
+		ServerLang   string `json:"js_serverlang"`
+		ServerID     string `json:"js_serverid"`
+		Status       string `json:"status"`
+		Messages     []any  `json:"messages"`
+		Components   []any  `json:"components"`
+		NewAjaxToken string `json:"newAjaxToken"`
+	}
+	_ = json.Unmarshal(pageHTML, &res)
+	newMessages := make([]ogame.EspionageReportSummary, 0)
+	for _, m := range res.Messages {
+		doc := ([]byte)(m.(string))
+		newMessage, _, _ := b.extractor.ExtractEspionageReportMessageIDs(doc)
+		newMessages = append(newMessages, newMessage...)
+	}
+	for _, m := range newMessages {
+		if m.Target.Equal(coord) {
+			return b.getEspionageReport(m.ID)
 		}
 	}
 	return ogame.EspionageReport{}, errors.New("espionage report not found for " + coord.String())
 }
 
 func (b *OGame) getDeleteMessagesToken() (string, error) {
-	if b.IsVGreaterThanOrEqual("11.14.0-beta9") {
-		pageHTML, _ := b.getPageContent(url.Values{"page": {"ingame"}, "component": {"messages"}})
-		tokenM := regexp.MustCompile(`name='token' value='([^']+)'`).FindSubmatch(pageHTML)
-		if len(tokenM) != 2 {
-			return "", errors.New("token not found")
-		}
-		return string(tokenM[1]), nil
-	} else {
-		pageHTML, _ := b.getPageContent(url.Values{"page": {"messages"}, "tab": {"20"}, "ajax": {"1"}})
-		tokenM := regexp.MustCompile(`var token = "([^']+)"`).FindSubmatch(pageHTML)
-		if len(tokenM) != 2 {
-			return "", errors.New("token not found")
-		}
-		return string(tokenM[1]), nil
+	var tmp struct {
+		NewAjaxToken string
 	}
+	pageJson, err := b.getPageMessages(1, EspionageMessagesTabID)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(pageJson, &tmp); err != nil {
+		return "", err
+	}
+	return tmp.NewAjaxToken, nil
 }
 
 func (b *OGame) deleteMessage(msgID int64) error {
@@ -3868,58 +3779,33 @@ func (b *OGame) deleteMessage(msgID int64) error {
 	if err != nil {
 		return err
 	}
-	by := []byte{}
-	err = nil
-
-	if b.IsVGreaterThanOrEqual("11.14.0-beta9") {
-		payload := url.Values{
-			"messageId": {utils.FI64(msgID)},
-			"token":     {token},
-		}
-		by, err = b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"messages"}, "asJson": {"1"}, "action": {"flagDeleted"}}, payload)
-		if err != nil {
-			return err
-		}
-
-		var res struct {
-			ServerLang   string `json:"js_serverlang"`
-			ServerID     string `json:"js_serverid"`
-			Status       string `json:"status"`
-			Message      string `json:"message"`
-			Components   []any  `json:"components"`
-			NewAjaxToken string `json:"newAjaxToken"`
-		}
-		if err := json.Unmarshal(by, &res); err != nil {
-			return errors.New("unable to find message id " + utils.FI64(msgID))
-		}
-		if res.Status != "success" {
-			return errors.New("unable to find message id " + utils.FI64(msgID))
-		}
-	} else {
-		payload := url.Values{
-			"messageId": {utils.FI64(msgID)},
-			"action":    {"103"},
-			"ajax":      {"1"},
-			"token":     {token},
-		}
-		by, err = b.postPageContent(url.Values{"page": {"messages"}}, payload)
-		if err != nil {
-			return err
-		}
-
-		var res map[string]any
-		if err := json.Unmarshal(by, &res); err != nil {
-			return errors.New("unable to find message id " + utils.FI64(msgID))
-		}
-		if val, ok := res[utils.FI64(msgID)]; ok {
-			if valB, ok := val.(bool); !ok || !valB {
-				return errors.New("unable to find message id " + utils.FI64(msgID))
-			}
-		} else {
-			return errors.New("unable to find message id " + utils.FI64(msgID))
-		}
+	vals := url.Values{
+		"page":      {"componentOnly"},
+		"component": {"messages"},
+		"asJson":    {"1"},
+		"action":    {"flagDeleted"},
+	}
+	payload := url.Values{
+		"token":     {token},
+		"messageId": {utils.FI64(msgID)},
+	}
+	by, err := b.postPageContent(vals, payload)
+	if err != nil {
+		return err
 	}
 
+	var res map[string]any
+	if err := json.Unmarshal(by, &res); err != nil {
+		return errors.New("unable to find message id " + utils.FI64(msgID))
+	}
+	fmt.Println(res)
+	if val, ok := res["status"]; ok {
+		if valB, ok := val.(string); !ok || valB != "success" {
+			return errors.New("unable to find message id " + utils.FI64(msgID) + " : " + res["message"].(string))
+		}
+	} else {
+		return errors.New("unable to find message id " + utils.FI64(msgID))
+	}
 	return nil
 }
 

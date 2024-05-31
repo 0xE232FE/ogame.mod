@@ -2,279 +2,64 @@ package v11_15_0
 
 import (
 	"encoding/json"
+	"github.com/PuerkitoBio/goquery"
+	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
+	"github.com/alaingilbert/ogame/pkg/ogame"
+	"github.com/alaingilbert/ogame/pkg/utils"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/PuerkitoBio/goquery"
-	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
-	v71 "github.com/alaingilbert/ogame/pkg/extractor/v71"
-	"github.com/alaingilbert/ogame/pkg/ogame"
-	"github.com/alaingilbert/ogame/pkg/utils"
 )
 
-func ExtractCoord(v string) (coord ogame.Coordinate) {
-	coordRgx := regexp.MustCompile(`\[(\d+):(\d+):(\d+)]`)
-	m := coordRgx.FindStringSubmatch(v)
-	if len(m) == 4 {
-		coord.Galaxy = utils.DoParseI64(m[1])
-		coord.System = utils.DoParseI64(m[2])
-		coord.Position = utils.DoParseI64(m[3])
-	}
-	return
-}
-
-// OK, PLANET TYPE RETURNS ALWAYS PLANET
-func extractEspionageReportMessageIDsFromDoc(doc *goquery.Document) ([]ogame.EspionageReportSummary, int64, error) {
-	msgs := make([]ogame.EspionageReportSummary, 0)
-	doc.Find(".msg").Each(func(i int, s *goquery.Selection) {
-		if idStr, exists := s.Attr("data-msg-id"); exists {
-			if id, err := utils.ParseI64(idStr); err == nil {
-				messageType := ogame.Report
-				if s.Find("span.espionageDefText").Size() > 0 {
-					messageType = ogame.Action
-				}
-				report := ogame.EspionageReportSummary{ID: id, Type: messageType}
-				report.From = s.Find(".msgSender").Text()
-				spanLink := s.Find(".msgTitle a")
-				targetStr := spanLink.Text()
-				report.Target = ExtractCoord(targetStr)
-
-				// TODO: implement moon type, the following extractor is not working 'cause the element always has the "planet" class
-				report.Target.Type = ogame.PlanetType
-
-				if messageType == ogame.Report {
-					s.Find(".lootPercentage").Each(func(i int, s *goquery.Selection) {
-						if regexp.MustCompile(`%`).MatchString(s.Text()) {
-							report.LootPercentage, _ = strconv.ParseFloat(regexp.MustCompile(`: (\d+)%`).FindStringSubmatch(s.Text())[1], 64)
-							report.LootPercentage /= 100
-						}
-					})
-				}
-				msgs = append(msgs, report)
-			}
-		}
-	})
-	return msgs, 0, nil
-}
-
-// OK, MISSING A COUPLE OF NOT VERY IMPORTANT THINGS
-func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Location) (ogame.EspionageReport, error) {
-	report := ogame.EspionageReport{}
-	report.ID = utils.DoParseI64(doc.Find("div.detail_msg").AttrOr("data-msg-id", "0"))
-	spanLink := doc.Find("span.msg_title a").First()
-	txt := spanLink.Text()
-	report.Coordinate = ExtractCoord(txt)
-	figure := spanLink.Find("figure").First()
-	if figure.HasClass("planet") {
-		report.Coordinate.Type = ogame.PlanetType
-	} else if figure.HasClass("moon") {
-		report.Coordinate.Type = ogame.MoonType
-	}
-	messageType := ogame.Report
-	if doc.Find("span.espionageDefText").Size() > 0 {
-		messageType = ogame.Action
-	}
-	report.Type = messageType
-	msgDateRaw := doc.Find("span.msg_date").Text()
-	msgDate, _ := time.ParseInLocation("02.01.2006 15:04:05", msgDateRaw, location)
-	report.Date = msgDate.In(time.Local)
-
-	username := doc.Find(".playerInfo .playerName").Find("span").First().Text()
-	report.Username = strings.TrimSpace(username)
-	characterClassStr := doc.Find(".playerInfo .characterClassInfo").First().Text()
-	characterClassStr = strings.TrimSpace(characterClassStr)
-	characterClassSplit := strings.Split(characterClassStr, ":")
-	if len(characterClassSplit) > 1 {
-		report.CharacterClass = v71.GetCharacterClass(strings.TrimSpace(characterClassSplit[1]))
-	}
-
-	report.AllianceClass = ogame.NoAllianceClass
-	allianceClassStr := doc.Find(".playerInfo .allianceClassInfo").Text()
-	allianceClassStr = strings.TrimSpace(allianceClassStr)
-	allianceClassSplit := strings.Split(allianceClassStr, ":")
-	if len(allianceClassSplit) > 0 {
-		// TODO: implement an extractor for alliance class
-		report.AllianceClass = ogame.NoAllianceClass
-	}
-
-	// Bandit, Starlord
-	banditstarlord := doc.Find(".playerInfo .playerName").First().Find("span").First().Find("span").First()
-	if banditstarlord.HasClass("honorRank") {
-		report.IsBandit = banditstarlord.HasClass("rank_bandit1") || banditstarlord.HasClass("rank_bandit2") || banditstarlord.HasClass("rank_bandit3")
-		report.IsStarlord = banditstarlord.HasClass("rank_starlord1") || banditstarlord.HasClass("rank_starlord2") || banditstarlord.HasClass("rank_starlord3")
-	}
-
-	honorableFound := doc.Find(".playerInfo .playerName").First().Find("span.status_abbr_honorableTarget")
-	report.HonorableTarget = honorableFound.Length() > 0
-
-	// IsInactive, IsLongInactive
-	inactive := doc.Find(".playerInfo .playerName").First().Find("span")
-	if inactive.HasClass("status_abbr_longinactive") {
-		report.IsInactive = true
-		report.IsLongInactive = true
-	} else if inactive.HasClass("status_abbr_inactive") {
-		report.IsInactive = true
-	}
-
-	// APIKey
-	apikey, _ := doc.Find("button.icon_apikey").Attr("title")
-	apiDoc, _ := goquery.NewDocumentFromReader(strings.NewReader(apikey))
-	report.APIKey = apiDoc.Find("input").First().AttrOr("value", "")
-
-	// Inactivity timer
-	report.LastActivity = utils.DoParseI64(doc.Find(".detailsActivity span").Text())
-
-	// CounterEspionage
-	ceTxt := doc.Find(".miscInfo .counterInfo").Text()
-	m1 := regexp.MustCompile(`(\d+)%`).FindStringSubmatch(ceTxt)
-	if len(m1) == 2 {
-		report.CounterEspionage = utils.DoParseI64(m1[1])
-	}
-
-	hasError := false
-	report.HasFleetInformation = false
-	report.HasDefensesInformation = false
-	report.HasBuildingsInformation = false
-	report.HasResearchesInformation = false
-
-	res := doc.Find(".resourceLootInfo .loot-row")
-	if res.Size() > 0 {
-		report.Metal = utils.ParseInt(res.Find("resource-icon.metal .amount").First().AttrOr("title", "0"))
-		report.Crystal = utils.ParseInt(res.Find("resource-icon.crystal .amount").First().AttrOr("title", "0"))
-		report.Deuterium = utils.ParseInt(res.Find("resource-icon.deuterium .amount").First().AttrOr("title", "0"))
-		report.Food = utils.ParseInt(res.Find("resource-icon.food .amount").First().AttrOr("title", "0"))
-		report.Population = utils.ParseInt(res.Find("resource-icon.population .amount").First().AttrOr("title", "0"))
-		report.Energy = utils.ParseInt(res.Find(".energy .amount").First().Text())
-	}
-
-	fleet := doc.Find(".fleetSection")
-	if fleet.Size() > 0 {
-		report.HasFleetInformation = true
-		lightFighter := utils.ParseInt(fleet.Find(".loot-item technology-icon[fighterlight]").Siblings().First().Find(".loot-amount").Text())
-		report.LightFighter = &lightFighter
-		heavyFighter := utils.ParseInt(fleet.Find(".loot-item technology-icon[fighterheavy]").Siblings().First().Find(".loot-amount").Text())
-		report.HeavyFighter = &heavyFighter
-		cruiser := utils.ParseInt(fleet.Find(".loot-item technology-icon[cruiser]").Siblings().First().Find(".loot-amount").Text())
-		report.Cruiser = &cruiser
-		battleship := utils.ParseInt(fleet.Find(".loot-item technology-icon[battleship]").Siblings().First().Find(".loot-amount").Text())
-		report.Battleship = &battleship
-		battlecruiser := utils.ParseInt(fleet.Find(".loot-item technology-icon[interceptor]").Siblings().First().Find(".loot-amount").Text())
-		report.Battlecruiser = &battlecruiser
-		bomber := utils.ParseInt(fleet.Find(".loot-item technology-icon[bomber]").Siblings().First().Find(".loot-amount").Text())
-		report.Bomber = &bomber
-		destroyer := utils.ParseInt(fleet.Find(".loot-item technology-icon[destroyer]").Siblings().First().Find(".loot-amount").Text())
-		report.Destroyer = &destroyer
-		deathstar := utils.ParseInt(fleet.Find(".loot-item technology-icon[deathstar]").Siblings().First().Find(".loot-amount").Text())
-		report.Deathstar = &deathstar
-		reaper := utils.ParseInt(fleet.Find(".loot-item technology-icon[reaper]").Siblings().First().Find(".loot-amount").Text())
-		report.Reaper = &reaper
-		pathfinder := utils.ParseInt(fleet.Find(".loot-item technology-icon[explorer]").Siblings().First().Find(".loot-amount").Text())
-		report.Pathfinder = &pathfinder
-		smallCargo := utils.ParseInt(fleet.Find(".loot-item technology-icon[transportersmall]").Siblings().First().Find(".loot-amount").Text())
-		report.SmallCargo = &smallCargo
-		largeCargo := utils.ParseInt(fleet.Find(".loot-item technology-icon[transporterlarge]").Siblings().First().Find(".loot-amount").Text())
-		report.LargeCargo = &largeCargo
-		colonyShip := utils.ParseInt(fleet.Find(".loot-item technology-icon[colonyship]").Siblings().First().Find(".loot-amount").Text())
-		report.ColonyShip = &colonyShip
-		recycler := utils.ParseInt(fleet.Find(".loot-item technology-icon[recycler]").Siblings().First().Find(".loot-amount").Text())
-		report.Recycler = &recycler
-		espionageProbe := utils.ParseInt(fleet.Find(".loot-item technology-icon[espionageprobe]").Siblings().First().Find(".loot-amount").Text())
-		report.EspionageProbe = &espionageProbe
-		solarSatellite := utils.ParseInt(fleet.Find(".loot-item technology-icon[solarsatellite]").Siblings().First().Find(".loot-amount").Text())
-		report.SolarSatellite = &solarSatellite
-		crawler := utils.ParseInt(fleet.Find(".loot-item technology-icon[resbuggy]").Siblings().First().Find(".loot-amount").Text())
-		report.Crawler = &crawler
-	}
-
-	defenses := doc.Find(".defenseSection")
-	if defenses.Size() > 0 {
-		report.HasDefensesInformation = true
-		rocketLauncher := utils.ParseInt(defenses.Find(".loot-item technology-icon[rocketlauncher]").Siblings().First().Find(".loot-amount").Text())
-		report.RocketLauncher = &rocketLauncher
-		lightLaser := utils.ParseInt(defenses.Find(".loot-item technology-icon[lasercannonlight]").Siblings().First().Find(".loot-amount").Text())
-		report.LightLaser = &lightLaser
-		heavyLaser := utils.ParseInt(defenses.Find(".loot-item technology-icon[lasercannonheavy]").Siblings().First().Find(".loot-amount").Text())
-		report.HeavyLaser = &heavyLaser
-		gaussCannon := utils.ParseInt(defenses.Find(".loot-item technology-icon[gausscannon]").Siblings().First().Find(".loot-amount").Text())
-		report.GaussCannon = &gaussCannon
-		ionCannon := utils.ParseInt(defenses.Find(".loot-item technology-icon[ioncannon]").Siblings().First().Find(".loot-amount").Text())
-		report.IonCannon = &ionCannon
-		plasmaTurret := utils.ParseInt(defenses.Find(".loot-item technology-icon[plasmacannon]").Siblings().First().Find(".loot-amount").Text())
-		report.PlasmaTurret = &plasmaTurret
-		smallShieldDome := utils.ParseInt(defenses.Find(".loot-item technology-icon[shielddomesmall]").Siblings().First().Find(".loot-amount").Text())
-		report.SmallShieldDome = &smallShieldDome
-		largeShieldDome := utils.ParseInt(defenses.Find(".loot-item technology-icon[shielddomelarge]").Siblings().First().Find(".loot-amount").Text())
-		report.LargeShieldDome = &largeShieldDome
-		antiBallisticMissiles := utils.ParseInt(defenses.Find(".loot-item technology-icon[missileinterceptor]").Siblings().First().Find(".loot-amount").Text())
-		report.AntiBallisticMissiles = &antiBallisticMissiles
-		interplanetaryMissiles := utils.ParseInt(defenses.Find(".loot-item technology-icon[missileinterplanetary]").Siblings().First().Find(".loot-amount").Text())
-		report.InterplanetaryMissiles = &interplanetaryMissiles
-	}
-
-	buildings := doc.Find(".buildingsSection")
-	if buildings.Size() > 0 {
-		report.HasBuildingsInformation = true
-		// TODO: implement building levels (there seems to be no IDs on the elements)
-	}
-
-	researches := doc.Find(".researchSection")
-	if researches.Size() > 0 {
-		report.HasResearchesInformation = true
-		// TODO: implement research levels (there seems to be no IDs on the elements)
-	}
-
-	if hasError {
-		return report, ogame.ErrDeactivateHidePictures
-	}
-	return report, nil
-}
-
-// OK, MISSING DETAILED RESOURCES INFO
 func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatReportSummary, int64, error) {
 	msgs := make([]ogame.CombatReportSummary, 0)
 	doc.Find(".msg").Each(func(i int, s *goquery.Selection) {
 		if idStr, exists := s.Attr("data-msg-id"); exists {
 			if id, err := utils.ParseI64(idStr); err == nil {
+				rawMessageData := s.Find("div.rawMessageData")
+				resultStr := rawMessageData.AttrOr("data-raw-result", "")
+				var result struct {
+					Loot struct {
+						Percentage int64
+						Resources  []struct {
+							Resource string
+							Amount   int64
+						}
+					}
+				}
+				_ = json.Unmarshal([]byte(resultStr), &result)
+
 				report := ogame.CombatReportSummary{ID: id}
 				report.Destination = v6.ExtractCoord(s.Find("div.msgHead a").Text())
 				report.Destination.Type = ogame.PlanetType
 				if s.Find("div.msgHead figure").HasClass("moon") {
 					report.Destination.Type = ogame.MoonType
 				}
-
-				attackerName := s.Find(".basicInfo .msg_ctn.msg_ctn2").Text()
-				m := regexp.MustCompile(`\([^']+\)`).FindStringSubmatch(attackerName)
-				if len(m) == 1 {
-					report.AttackerName = m[0][1 : len(m[0])-1]
-				}
-
-				defenderName := s.Find(".miscInfo .msg_ctn.msg_ctn2").Text()
-				m = regexp.MustCompile(`\([^']+\)`).FindStringSubmatch(defenderName)
-				if len(m) == 1 {
-					report.DefenderName = m[0][1 : len(m[0])-1]
-				}
-
-				apiKeyTitle := s.Find(".icon_apikey").AttrOr("title", "")
-				m = regexp.MustCompile(`'(cr-[^']+)'`).FindStringSubmatch(apiKeyTitle)
+				apiKeyTitle := s.Find("button.icon_apikey").AttrOr("title", "")
+				m := regexp.MustCompile(`'(cr-[^']+)'`).FindStringSubmatch(apiKeyTitle)
 				if len(m) == 2 {
 					report.APIKey = m[1]
 				}
 
-				// There are no more detailed infos about looted resources in the combat report summary
-				rel := s.Find(".basicInfo .msg_ctn.msg_ctn3:nth-child(2)").Text()
-				m = regexp.MustCompile(`[\d.,]+[^\d]*([\d.,]+)`).FindStringSubmatch(rel)
+				for _, resource := range result.Loot.Resources {
+					res := resource.Resource
+					if utils.InArr(res, []string{"deuter", "deuterij", "deutérium", "deuterium", "deuterio", "дейтерий", "deutério", "deuteriu", "デューテリウム", "重氫", "δευτέριο"}) {
+						report.Deuterium = resource.Amount
+					} else if utils.InArr(res, []string{"kristalli", "kristal", "cristal", "crystal", "krystal", "kryštály", "kryształ", "kristall", "krystall", "cristallo", "кристалл", "krystaly", "クリスタル", "晶體", "κρύσταλλο"}) {
+						report.Crystal = resource.Amount
+					} else if utils.InArr(res, []string{"metalli", "métal", "metal", "metall", "kov", "kovy", "металл", "metallo", "metaal", "メタル", "金屬", "μέταλλο"}) {
+						report.Metal = resource.Amount
+					}
+				}
+
+				debrisFieldTitle := s.Find("span.msg_content div.combatLeftSide span").Eq(2).AttrOr("title", "0")
+				report.DebrisField = utils.ParseInt(debrisFieldTitle)
+				resText := s.Find("span.msg_content div.combatLeftSide span").Eq(1).Text()
+				m = regexp.MustCompile(`[\d.,]+[^\d]*([\d.,]+)`).FindStringSubmatch(resText)
 				if len(m) == 2 {
 					report.Loot = utils.ParseInt(m[1])
 				}
-				m = regexp.MustCompile(`: ([\d.,]+)`).FindStringSubmatch(rel)
-				if len(m) == 2 {
-					report.Resources = utils.ParseInt(m[1][0 : len(m[1])-1])
-				}
-
-				report.DebrisField = utils.ParseInt(s.Find(".basicInfo .msg_ctn.msg_ctn3:nth-child(3)").AttrOr("title", "0"))
-
 				msgDate, _ := time.Parse("02.01.2006 15:04:05", s.Find("div.msgDate").Text())
 				report.CreatedAt = msgDate
 
@@ -296,9 +81,290 @@ func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatRe
 			}
 		}
 	})
-	return msgs, 0, nil
+	return msgs, 1, nil
 }
 
+func extractEspionageReportMessageIDsFromDoc(doc *goquery.Document) ([]ogame.EspionageReportSummary, int64, error) {
+	msgs := make([]ogame.EspionageReportSummary, 0)
+	doc.Find(".msg").Each(func(i int, s *goquery.Selection) {
+		rawData := s.Find("div.rawMessageData").First()
+		if idStr, exists := s.Attr("data-msg-id"); exists {
+			if id, err := utils.ParseI64(idStr); err == nil {
+				messageType := ogame.Report
+				if s.Find("span.espionageDefText").Size() > 0 {
+					messageType = ogame.Action
+				}
+				report := ogame.EspionageReportSummary{ID: id, Type: messageType}
+				report.From = s.Find(".msgSender").Text()
+				targetStr := rawData.AttrOr("data-raw-coordinates", "")
+				report.Target, _ = ogame.ParseCoord(targetStr)
+				report.Target.Type = ogame.PlanetType
+				planetType := rawData.AttrOr("data-raw-targetplanettype", "1")
+				if planetType == "3" {
+					report.Target.Type = ogame.MoonType
+				}
+				if messageType == ogame.Report {
+					s.Find(".lootPercentage").Each(func(i int, s *goquery.Selection) {
+						if regexp.MustCompile(`%`).MatchString(s.Text()) {
+							report.LootPercentage, _ = strconv.ParseFloat(regexp.MustCompile(`: (\d+)%`).FindStringSubmatch(s.Text())[1], 64)
+							report.LootPercentage /= 100
+						}
+					})
+				}
+				msgs = append(msgs, report)
+			}
+		}
+	})
+	return msgs, 1, nil
+}
+
+func extractEspionageReportFromDoc(doc *goquery.Document, location *time.Location) (ogame.EspionageReport, error) {
+	report := ogame.EspionageReport{}
+	report.ID = utils.DoParseI64(doc.Find("div.detail_msg").AttrOr("data-msg-id", "0"))
+	rawMessageData := doc.Find("div.rawMessageData").First()
+	txt := rawMessageData.AttrOr("data-raw-coordinates", "")
+	report.Coordinate = ogame.DoParseCoord(txt)
+	if rawMessageData.AttrOr("data-raw-targetPlanetType", "1") == "1" {
+		report.Coordinate.Type = ogame.PlanetType
+	} else {
+		report.Coordinate.Type = ogame.MoonType
+	}
+	messageType := ogame.Report
+	//if doc.Find("span.espionageDefText").Size() > 0 {
+	//	messageType = ogame.Action
+	//}
+	report.Type = messageType
+
+	msgDateRaw := doc.Find("span.msg_date").Text()
+	msgDate, _ := time.ParseInLocation("02.01.2006 15:04:05", msgDateRaw, location)
+	report.Date = msgDate.In(time.Local)
+
+	report.Username = strings.TrimSpace(rawMessageData.AttrOr("data-raw-playername", ""))
+
+	characterClassJsonStr := strings.TrimSpace(rawMessageData.AttrOr("data-raw-characterclass", ""))
+	var characterClassStruct struct{ ID int }
+	_ = json.Unmarshal([]byte(characterClassJsonStr), &characterClassStruct)
+	switch characterClassStruct.ID {
+	case 1:
+		report.CharacterClass = ogame.Collector
+	case 2:
+		report.CharacterClass = ogame.General
+	case 3:
+		report.CharacterClass = ogame.Discoverer
+	default:
+		report.CharacterClass = ogame.NoClass
+	}
+
+	allianceClassJsonStr := strings.TrimSpace(rawMessageData.AttrOr("data-raw-allianceclass", ""))
+	var allianceClassStruct struct{ ID int }
+	_ = json.Unmarshal([]byte(allianceClassJsonStr), &allianceClassStruct)
+	switch allianceClassStruct.ID {
+	case 1:
+		report.AllianceClass = ogame.Warrior
+	case 2:
+		report.AllianceClass = ogame.Trader
+	case 3:
+		report.AllianceClass = ogame.Researcher
+	default:
+		report.AllianceClass = ogame.NoAllianceClass
+	}
+
+	// Bandit, Starlord
+	banditstarlord := doc.Find("span.honorRank").First()
+	if banditstarlord.HasClass("honorRank") {
+		report.IsBandit = banditstarlord.HasClass("rank_bandit1") || banditstarlord.HasClass("rank_bandit2") || banditstarlord.HasClass("rank_bandit3")
+		report.IsStarlord = banditstarlord.HasClass("rank_starlord1") || banditstarlord.HasClass("rank_starlord2") || banditstarlord.HasClass("rank_starlord3")
+	}
+
+	report.HonorableTarget = doc.Find("span.status_abbr_honorableTarget").Length() > 0
+
+	// IsInactive, IsLongInactive
+	inactive := doc.Find("div.playerInfo").First().Find("span")
+	if inactive.HasClass("status_abbr_longinactive") {
+		report.IsInactive = true
+		report.IsLongInactive = true
+	} else if inactive.HasClass("status_abbr_inactive") {
+		report.IsInactive = true
+	}
+
+	// APIKey
+	apikey, _ := doc.Find("button.icon_apikey").Attr("title")
+	apiDoc, _ := goquery.NewDocumentFromReader(strings.NewReader(apikey))
+	report.APIKey = apiDoc.Find("input").First().AttrOr("value", "")
+
+	// Inactivity timer
+	report.LastActivity = utils.ParseInt(rawMessageData.AttrOr("data-raw-activity", "-1"))
+	if report.LastActivity == -1 {
+		report.LastActivity = 0
+	}
+
+	// CounterEspionage
+	report.CounterEspionage = utils.ParseInt(rawMessageData.AttrOr("data-raw-counterespionagechance", "0"))
+
+	report.Metal = utils.DoParseI64(rawMessageData.AttrOr("data-raw-metal", "0"))
+	report.Crystal = utils.DoParseI64(rawMessageData.AttrOr("data-raw-crystal", "0"))
+	report.Deuterium = utils.DoParseI64(rawMessageData.AttrOr("data-raw-deuterium", "0"))
+	report.Food = utils.DoParseI64(rawMessageData.AttrOr("data-raw-food", "0"))
+	report.Population = utils.DoParseI64(rawMessageData.AttrOr("data-raw-population", "0"))
+	report.Energy = utils.ParseInt(doc.Find("resource-icon.energy").Next().Text())
+
+	report.HasBuildingsInformation = rawMessageData.AttrOr("data-raw-hiddenbuildings", "1") == ""
+	if report.HasBuildingsInformation {
+		buildingsStr := rawMessageData.AttrOr("data-raw-buildings", "{}")
+		var buildingsStruct struct {
+			MetalMine            *int64 `json:"1"`
+			CrystalMine          *int64 `json:"2"`
+			DeuteriumSynthesizer *int64 `json:"3"`
+			SolarPlant           *int64 `json:"4"`
+			FusionReactor        *int64 `json:"12"`
+			MetalStorage         *int64 `json:"22"`
+			CrystalStorage       *int64 `json:"23"`
+			DeuteriumTank        *int64 `json:"24"`
+			AllianceDepot        *int64 `json:"34"`
+			RoboticsFactory      *int64 `json:"14"`
+			Shipyard             *int64 `json:"21"`
+			ResearchLab          *int64 `json:"31"`
+			MissileSilo          *int64 `json:"44"`
+			NaniteFactory        *int64 `json:"15"`
+			Terraformer          *int64 `json:"33"`
+			SpaceDock            *int64 `json:"36"`
+			LunarBase            *int64 `json:"41"`
+			SensorPhalanx        *int64 `json:"42"`
+			JumpGate             *int64 `json:"43"`
+		}
+		_ = json.Unmarshal([]byte(buildingsStr), &buildingsStruct)
+		report.MetalMine = buildingsStruct.MetalMine
+		report.CrystalMine = buildingsStruct.CrystalMine
+		report.DeuteriumSynthesizer = buildingsStruct.DeuteriumSynthesizer
+		report.SolarPlant = buildingsStruct.SolarPlant
+		report.FusionReactor = buildingsStruct.FusionReactor
+		report.MetalStorage = buildingsStruct.MetalStorage
+		report.CrystalStorage = buildingsStruct.CrystalStorage
+		report.DeuteriumTank = buildingsStruct.DeuteriumTank
+		report.AllianceDepot = buildingsStruct.AllianceDepot
+		report.RoboticsFactory = buildingsStruct.RoboticsFactory
+		report.Shipyard = buildingsStruct.Shipyard
+		report.ResearchLab = buildingsStruct.ResearchLab
+		report.MissileSilo = buildingsStruct.MissileSilo
+		report.NaniteFactory = buildingsStruct.NaniteFactory
+		report.Terraformer = buildingsStruct.Terraformer
+		report.SpaceDock = buildingsStruct.SpaceDock
+		report.LunarBase = buildingsStruct.LunarBase
+		report.SensorPhalanx = buildingsStruct.SensorPhalanx
+		report.JumpGate = buildingsStruct.JumpGate
+	}
+	report.HasResearchesInformation = rawMessageData.AttrOr("data-raw-hiddenresearch", "1") == ""
+	if report.HasResearchesInformation {
+		researchStr := rawMessageData.AttrOr("data-raw-research", "{}")
+		var researchStruct struct {
+			EspionageTechnology          *int64 `json:"106"`
+			ComputerTechnology           *int64 `json:"108"`
+			WeaponsTechnology            *int64 `json:"109"`
+			ShieldingTechnology          *int64 `json:"110"`
+			ArmourTechnology             *int64 `json:"111"`
+			EnergyTechnology             *int64 `json:"113"`
+			HyperspaceTechnology         *int64 `json:"114"`
+			CombustionDrive              *int64 `json:"115"`
+			ImpulseDrive                 *int64 `json:"117"`
+			HyperspaceDrive              *int64 `json:"118"`
+			LaserTechnology              *int64 `json:"120"`
+			IonTechnology                *int64 `json:"121"`
+			PlasmaTechnology             *int64 `json:"122"`
+			IntergalacticResearchNetwork *int64 `json:"123"`
+			Astrophysics                 *int64 `json:"124"`
+			GravitonTechnology           *int64 `json:"199"`
+		}
+		_ = json.Unmarshal([]byte(researchStr), &researchStruct)
+		report.EspionageTechnology = researchStruct.EspionageTechnology
+		report.ComputerTechnology = researchStruct.ComputerTechnology
+		report.WeaponsTechnology = researchStruct.WeaponsTechnology
+		report.ShieldingTechnology = researchStruct.ShieldingTechnology
+		report.ArmourTechnology = researchStruct.ArmourTechnology
+		report.EnergyTechnology = researchStruct.EnergyTechnology
+		report.HyperspaceTechnology = researchStruct.HyperspaceTechnology
+		report.CombustionDrive = researchStruct.CombustionDrive
+		report.ImpulseDrive = researchStruct.ImpulseDrive
+		report.HyperspaceDrive = researchStruct.HyperspaceDrive
+		report.LaserTechnology = researchStruct.LaserTechnology
+		report.IonTechnology = researchStruct.IonTechnology
+		report.PlasmaTechnology = researchStruct.PlasmaTechnology
+		report.IntergalacticResearchNetwork = researchStruct.IntergalacticResearchNetwork
+		report.Astrophysics = researchStruct.Astrophysics
+		report.GravitonTechnology = researchStruct.GravitonTechnology
+	}
+
+	report.HasFleetInformation = rawMessageData.AttrOr("data-raw-hiddenships", "1") == ""
+	if report.HasFleetInformation {
+		fleetStr := rawMessageData.AttrOr("data-raw-fleet", "{}")
+		var fleetStruct struct {
+			SmallCargo     *int64 `json:"202"`
+			LargeCargo     *int64 `json:"203"`
+			LightFighter   *int64 `json:"204"`
+			HeavyFighter   *int64 `json:"205"`
+			Cruiser        *int64 `json:"206"`
+			Battleship     *int64 `json:"207"`
+			ColonyShip     *int64 `json:"208"`
+			Recycler       *int64 `json:"209"`
+			EspionageProbe *int64 `json:"210"`
+			Bomber         *int64 `json:"211"`
+			SolarSatellite *int64 `json:"212"`
+			Destroyer      *int64 `json:"213"`
+			Deathstar      *int64 `json:"214"`
+			Battlecruiser  *int64 `json:"215"`
+			Crawler        *int64 `json:"217"`
+			Reaper         *int64 `json:"218"`
+			Pathfinder     *int64 `json:"219"`
+		}
+		_ = json.Unmarshal([]byte(fleetStr), &fleetStruct)
+		report.SmallCargo = fleetStruct.SmallCargo
+		report.LargeCargo = fleetStruct.LargeCargo
+		report.LightFighter = fleetStruct.LightFighter
+		report.HeavyFighter = fleetStruct.HeavyFighter
+		report.Cruiser = fleetStruct.Cruiser
+		report.Battleship = fleetStruct.Battleship
+		report.ColonyShip = fleetStruct.ColonyShip
+		report.Recycler = fleetStruct.Recycler
+		report.EspionageProbe = fleetStruct.EspionageProbe
+		report.Bomber = fleetStruct.Bomber
+		report.SolarSatellite = fleetStruct.SolarSatellite
+		report.Destroyer = fleetStruct.Destroyer
+		report.Deathstar = fleetStruct.Deathstar
+		report.Battlecruiser = fleetStruct.Battlecruiser
+		report.Crawler = fleetStruct.Crawler
+		report.Reaper = fleetStruct.Reaper
+		report.Pathfinder = fleetStruct.Pathfinder
+	}
+
+	report.HasDefensesInformation = rawMessageData.AttrOr("data-raw-hiddendef", "1") == ""
+	if report.HasDefensesInformation {
+		defStr := rawMessageData.AttrOr("data-raw-defense", "{}")
+		var defStruct struct {
+			RocketLauncher         *int64 `json:"401"`
+			LightLaser             *int64 `json:"402"`
+			HeavyLaser             *int64 `json:"403"`
+			GaussCannon            *int64 `json:"404"`
+			IonCannon              *int64 `json:"405"`
+			PlasmaTurret           *int64 `json:"406"`
+			SmallShieldDome        *int64 `json:"407"`
+			LargeShieldDome        *int64 `json:"408"`
+			AntiBallisticMissiles  *int64 `json:"502"`
+			InterplanetaryMissiles *int64 `json:"503"`
+		}
+		_ = json.Unmarshal([]byte(defStr), &defStruct)
+		report.RocketLauncher = defStruct.RocketLauncher
+		report.LightLaser = defStruct.LightLaser
+		report.HeavyLaser = defStruct.HeavyLaser
+		report.GaussCannon = defStruct.GaussCannon
+		report.IonCannon = defStruct.IonCannon
+		report.PlasmaTurret = defStruct.PlasmaTurret
+		report.SmallShieldDome = defStruct.SmallShieldDome
+		report.LargeShieldDome = defStruct.LargeShieldDome
+		report.AntiBallisticMissiles = defStruct.AntiBallisticMissiles
+		report.InterplanetaryMissiles = defStruct.InterplanetaryMissiles
+	}
+
+	return report, nil
+}
 // OK
 func extractExpeditionMessagesFromDoc(doc *goquery.Document, location *time.Location) ([]ogame.ExpeditionMessage, int64, error) {
 	msgs := make([]ogame.ExpeditionMessage, 0)

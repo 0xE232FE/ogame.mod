@@ -14,7 +14,7 @@ import (
 	v104 "github.com/alaingilbert/ogame/pkg/extractor/v104"
 	v11 "github.com/alaingilbert/ogame/pkg/extractor/v11"
 	"github.com/alaingilbert/ogame/pkg/extractor/v11_13_0"
-	v11_15_0 "github.com/alaingilbert/ogame/pkg/extractor/v11_15_0"
+	"github.com/alaingilbert/ogame/pkg/extractor/v11_15_0"
 	"github.com/alaingilbert/ogame/pkg/extractor/v11_9_0"
 	v7 "github.com/alaingilbert/ogame/pkg/extractor/v7"
 	v71 "github.com/alaingilbert/ogame/pkg/extractor/v71"
