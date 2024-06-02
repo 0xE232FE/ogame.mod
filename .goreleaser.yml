@@ -1,8 +1,11 @@
+version: 2
 project_name: ogamed
+env_files:
+  github_token: ~/.config/goreleaser/github_token
 release:
   github:
-    owner: alaingilbert
-    name: ogame
+    owner: 0xE232FE
+    name: ogame.mod
   name_template: '{{.Tag}}'
 builds:
 - goos:
@@ -41,6 +44,7 @@ archives:
     - changelog*
     - CHANGELOG*
 snapshot:
-  name_template: SNAPSHOT-{{ .Commit }}
+  name_template: SNAPSHOT-{{ .Tag }}
+  #name_template: SNAPSHOT-{{ .Commit }}
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
