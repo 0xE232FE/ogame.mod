@@ -43,6 +43,21 @@ func (e *Extractor) GetLanguage() string {
 	return e.lang
 }
 
+// ExtractToken ...
+func (e *Extractor) ExtractToken(pageHTML []byte) (string, error) {
+	panic("implement me")
+}
+
+// ExtractLfBonuses ...
+func (e *Extractor) ExtractLfBonuses(pageHTML []byte) (ogame.LfBonuses, error) {
+	panic("implement me")
+}
+
+// ExtractLfBonusesFromDoc ...
+func (e *Extractor) ExtractLfBonusesFromDoc(doc *goquery.Document) (ogame.LfBonuses, error) {
+	panic("implement me")
+}
+
 // ExtractTechnologyDetails ...
 func (e *Extractor) ExtractTechnologyDetails(pageHTML []byte) (out ogame.TechnologyDetails, err error) {
 	panic("implement me")
@@ -716,6 +731,16 @@ func (e *Extractor) ExtractCharacterClassFromDoc(doc *goquery.Document) (ogame.C
 	return 0, errors.New("character class not supported in ")
 }
 
+// ExtractAllianceClass ...
+func (e *Extractor) ExtractAllianceClass(pageHTML []byte) (ogame.AllianceClass, error) {
+	return 0, errors.New("alliance class not supported")
+}
+
+// ExtractAllianceClassFromDoc ...
+func (e *Extractor) ExtractAllianceClassFromDoc(doc *goquery.Document) (ogame.AllianceClass, error) {
+	return 0, errors.New("alliance class not supported")
+}
+
 // ExtractCommanderFromDoc ...
 func (e *Extractor) ExtractCommanderFromDoc(doc *goquery.Document) bool {
 	return extractCommanderFromDoc(doc)
@@ -813,8 +838,13 @@ func (e *Extractor) ExtractGalaxyInfos(pageHTML []byte, botPlayerName string, bo
 }
 
 // ExtractPhalanx ...
-func (e *Extractor) ExtractPhalanx(pageHTML []byte) ([]ogame.Fleet, error) {
+func (e *Extractor) ExtractPhalanx(pageHTML []byte) ([]ogame.PhalanxFleet, error) {
 	return extractPhalanx(pageHTML)
+}
+
+// ExtractPhalanxNewToken ...
+func (e *Extractor) ExtractPhalanxNewToken(pageHTML []byte) (string, error) {
+	panic("not implemented")
 }
 
 // ExtractJumpGate return the available ships to send, form token, possible moon IDs and wait time (if any)
@@ -867,16 +897,6 @@ func (e *Extractor) ExtractCharacterClass(pageHTML []byte) (ogame.CharacterClass
 func (e *Extractor) ExtractAuction(pageHTML []byte) (ogame.Auction, error) {
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	return extractAuctionFromDoc(doc)
-}
-
-// ExtractAllianceClass ...
-func (e *Extractor) ExtractAllianceClass(pageHTML []byte) ogame.AllianceClass {
-	panic("not implemented")
-}
-
-// ExtractAllianceClassFromDoc ...
-func (e *Extractor) ExtractAllianceClassFromDoc(doc *goquery.Document) ogame.AllianceClass {
-	panic("not implemented")
 }
 
 // ExtractHighscore ...

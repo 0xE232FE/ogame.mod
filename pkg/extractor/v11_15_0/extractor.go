@@ -52,13 +52,13 @@ func (e *Extractor) ExtractCombatReportMessagesFromDoc(doc *goquery.Document) ([
 }
 
 // ExtractExpeditionMessages ...
-func (e Extractor) ExtractExpeditionMessages(pageHTML []byte) ([]ogame.ExpeditionMessage, int64, error) {
+func (e *Extractor) ExtractExpeditionMessages(pageHTML []byte) ([]ogame.ExpeditionMessage, int64, error) {
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	return e.ExtractExpeditionMessagesFromDoc(doc)
 }
 
 // ExtractExpeditionMessagesFromDoc ...
-func (e Extractor) ExtractExpeditionMessagesFromDoc(doc *goquery.Document) ([]ogame.ExpeditionMessage, int64, error) {
+func (e *Extractor) ExtractExpeditionMessagesFromDoc(doc *goquery.Document) ([]ogame.ExpeditionMessage, int64, error) {
 	return extractExpeditionMessagesFromDoc(doc, e.GetLocation())
 }
 
@@ -74,12 +74,17 @@ func (e *Extractor) ExtractLfBonusesFromDoc(doc *goquery.Document) (ogame.LfBonu
 }
 
 // ExtractAllianceClass ...
-func (e *Extractor) ExtractAllianceClass(pageHTML []byte) ogame.AllianceClass {
+func (e Extractor) ExtractAllianceClass(pageHTML []byte) (ogame.AllianceClass, error) {
 	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
 	return e.ExtractAllianceClassFromDoc(doc)
 }
 
 // ExtractAllianceClassFromDoc ...
-func (e *Extractor) ExtractAllianceClassFromDoc(doc *goquery.Document) ogame.AllianceClass {
+func (e Extractor) ExtractAllianceClassFromDoc(doc *goquery.Document) (ogame.AllianceClass, error) {
 	return extractAllianceClassFromDoc(doc)
+}
+
+// ExtractPhalanxNewToken ...
+func (e *Extractor) ExtractPhalanxNewToken(pageHTML []byte) (string, error) {
+	return extractPhalanxNewToken(pageHTML)
 }

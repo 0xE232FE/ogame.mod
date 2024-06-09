@@ -37,6 +37,7 @@ type FetchTechsAjaxPage struct{ Page }
 type RocketlayerAjaxPage struct{ Page }
 type PhalanxAjaxPage struct{ Page }
 type JumpGateAjaxPage struct{ Page }
+type AllianceOverviewTabAjaxPage struct{ Page }
 
 type FullPage struct{ Page }
 type OverviewPage struct{ FullPage }
@@ -50,6 +51,7 @@ type DefensesPage struct{ FullPage }
 type MovementPage struct{ FullPage }
 type LfBuildingsPage struct{ FullPage }
 type LfResearchPage struct{ FullPage }
+type LfBonusesPage struct{ FullPage }
 type Exodus struct{ FullPage }
 
 type FullPagePages interface {
@@ -57,6 +59,7 @@ type FullPagePages interface {
 		PreferencesPage |
 		SuppliesPage |
 		ResourcesSettingsPage |
+		LfBonusesPage |
 		FacilitiesPage |
 		LfBuildingsPage |
 		LfResearchPage |
@@ -85,7 +88,8 @@ type AjaxPagePages interface {
 		FetchTechsAjaxPage |
 		RocketlayerAjaxPage |
 		PhalanxAjaxPage |
-		JumpGateAjaxPage
+		JumpGateAjaxPage |
+		AllianceOverviewTabAjaxPage
 }
 
 type IFullPage interface {
@@ -93,8 +97,10 @@ type IFullPage interface {
 	ExtractOGameSession() string
 	ExtractIsInVacation() bool
 	ExtractPlanets() []ogame.Planet
+	ExtractPlanetID() (ogame.CelestialID, error)
 	ExtractPlanetCoordinate() (ogame.Coordinate, error)
 	ExtractAjaxChatToken() (string, error)
+	ExtractToken() (string, error)
 	ExtractCharacterClass() (ogame.CharacterClass, error)
 	ExtractCommander() bool
 	ExtractAdmiral() bool
@@ -113,6 +119,8 @@ func AutoParseFullPage(e extractor.Extractor, pageHTML []byte) (out IFullPage) {
 		out = &PreferencesPage{fullPage}
 	} else if bytes.Contains(pageHTML, []byte(`currentPage = "research";`)) {
 		out = &ResearchPage{fullPage}
+	} else if bytes.Contains(pageHTML, []byte(`currentPage = "lfbonuses";`)) {
+		out = &LfBonusesPage{fullPage}
 	} else {
 		out = &fullPage
 	}
@@ -143,6 +151,9 @@ func ParsePage[T FullPagePages](e extractor.Extractor, pageHTML []byte) (*T, err
 		}
 	case ResearchPage:
 		tt := T(ResearchPage{fullPage})
+		return &tt, nil
+	case LfBonusesPage:
+		tt := T(LfBonusesPage{fullPage})
 		return &tt, nil
 	case FacilitiesPage:
 		tt := T(FacilitiesPage{fullPage})
@@ -187,6 +198,8 @@ func ParseAjaxPage[T AjaxPagePages](e extractor.Extractor, pageHTML []byte) (T, 
 		return T(JumpGateAjaxPage{page}), nil
 	case FetchTechsAjaxPage:
 		return T(FetchTechsAjaxPage{page}), nil
+	case AllianceOverviewTabAjaxPage:
+		return T(AllianceOverviewTabAjaxPage{page}), nil
 	}
 	return zero, ErrParsePageType
 }

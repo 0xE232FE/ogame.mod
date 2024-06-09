@@ -444,6 +444,16 @@ func (b *OGame) GetCachedResearch() ogame.Researches {
 	return b.WithPriority(taskRunner.Normal).GetCachedResearch()
 }
 
+// GetLfBonuses returns cached lifeform bonuses
+func (b *OGame) GetLfBonuses() (ogame.LfBonuses, error) {
+	return b.WithPriority(taskRunner.Normal).GetLfBonuses()
+}
+
+// GetCachedLfBonuses returns cached lifeform bonuses
+func (b *OGame) GetCachedLfBonuses() (ogame.LfBonuses, error) {
+	return b.WithPriority(taskRunner.Normal).GetCachedLfBonuses()
+}
+
 // GetResearch gets the player researches information
 func (b *OGame) GetResearch() (ogame.Researches, error) {
 	return b.WithPriority(taskRunner.Normal).GetResearch()
@@ -535,13 +545,13 @@ func (b *OGame) GetTechs(celestialID ogame.CelestialID) (ogame.ResourcesBuilding
 }
 
 // SendFleet sends a fleet
-func (b *OGame) SendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifiable, speed ogame.Speed, where ogame.Coordinate,
+func (b *OGame) SendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos, speed ogame.Speed, where ogame.Coordinate,
 	mission ogame.MissionID, resources ogame.Resources, holdingTime, unionID int64) (ogame.Fleet, error) {
 	return b.WithPriority(taskRunner.Normal).SendFleet(celestialID, ships, speed, where, mission, resources, holdingTime, unionID)
 }
 
 // EnsureFleet either sends all the requested ships or fail
-func (b *OGame) EnsureFleet(celestialID ogame.CelestialID, ships []ogame.Quantifiable, speed ogame.Speed, where ogame.Coordinate,
+func (b *OGame) EnsureFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos, speed ogame.Speed, where ogame.Coordinate,
 	mission ogame.MissionID, resources ogame.Resources, holdingTime, unionID int64) (ogame.Fleet, error) {
 	return b.WithPriority(taskRunner.Normal).EnsureFleet(celestialID, ships, speed, where, mission, resources, holdingTime, unionID)
 }
@@ -661,12 +671,12 @@ func (b *OGame) RegisterHTMLInterceptor(fn func(method, url string, params, payl
 // IMPORTANT: This function DOES validate that the coordinate is a valid planet in range of phalanx
 //
 //	and that you have enough deuterium.
-func (b *OGame) Phalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame.Fleet, error) {
+func (b *OGame) Phalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame.PhalanxFleet, error) {
 	return b.WithPriority(taskRunner.Normal).Phalanx(moonID, coord)
 }
 
 // UnsafePhalanx same as Phalanx but does not perform any input validation.
-func (b *OGame) UnsafePhalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame.Fleet, error) {
+func (b *OGame) UnsafePhalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame.PhalanxFleet, error) {
 	return b.WithPriority(taskRunner.Normal).UnsafePhalanx(moonID, coord)
 }
 
@@ -710,13 +720,18 @@ func (b *OGame) CharacterClass() ogame.CharacterClass {
 	return b.characterClass
 }
 
+// GetCachedAllianceClass returns the bot alliance class
+func (b *OGame) GetCachedAllianceClass() (ogame.AllianceClass, error) {
+	return b.WithPriority(taskRunner.Normal).GetCachedAllianceClass()
+}
+
 // CountColonies returns colonies count/possible
 func (b *OGame) CountColonies() (int64, int64) {
 	return b.coloniesCount, b.coloniesPossible
 }
 
 // AllianceClass returns the bot alliance class
-func (b *OGame) GetAllianceClass() ogame.AllianceClass {
+func (b *OGame) GetAllianceClass() (ogame.AllianceClass, error) {
 	return b.WithPriority(taskRunner.Normal).GetAllianceClass()
 }
 
@@ -751,7 +766,7 @@ func (b *OGame) GetDMCosts(celestialID ogame.CelestialID) (ogame.DMCosts, error)
 }
 
 // UseDM use dark matter to fast build
-func (b *OGame) UseDM(typ string, celestialID ogame.CelestialID) error {
+func (b *OGame) UseDM(typ ogame.DMType, celestialID ogame.CelestialID) error {
 	return b.WithPriority(taskRunner.Normal).UseDM(typ, celestialID)
 }
 

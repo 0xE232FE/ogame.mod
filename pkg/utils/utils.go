@@ -208,7 +208,7 @@ func TernaryOrZero[T any](predicate bool, a T) T {
 	return Ternary(predicate, a, zero)
 }
 
-// Round value to the nearest thousandth
+// RoundThousandth round value to the nearest thousandth
 func RoundThousandth(n float64) float64 {
 	return math.Floor(n*1000) / 1000
 }

@@ -22,6 +22,7 @@ const (
 	ShipyardPageName         = "shipyard"
 	MovementPageName         = "movement"
 	ResearchPageName         = "research"
+	LfBonusesPageName        = "lfbonuses"
 	PlanetlayerPageName      = "planetlayer"
 	LogoutPageName           = "logout"
 	TraderOverviewPageName   = "traderOverview"
@@ -86,6 +87,8 @@ func getPage[T parser.FullPagePages](b *OGame, opts ...Option) (*T, error) {
 		pageName = DefensesPageName
 	case parser.ResearchPage:
 		pageName = ResearchPageName
+	case parser.LfBonusesPage:
+		pageName = LfBonusesPageName
 	case parser.LfBuildingsPage:
 		pageName = LfBuildingsPageName
 	case parser.LfResearchPage:
@@ -119,6 +122,7 @@ func getAjaxPage[T parser.AjaxPagePages](b *OGame, vals url.Values, opts ...Opti
 	case parser.RocketlayerAjaxPage:
 	case parser.PhalanxAjaxPage:
 	case parser.JumpGateAjaxPage:
+	case parser.AllianceOverviewTabAjaxPage:
 	default:
 		panic("not implemented")
 	}

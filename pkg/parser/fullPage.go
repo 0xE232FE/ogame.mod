@@ -18,6 +18,10 @@ func (p *FullPage) ExtractAjaxChatToken() (string, error) {
 	return p.e.ExtractAjaxChatToken(p.content)
 }
 
+func (p *FullPage) ExtractToken() (string, error) {
+	return p.e.ExtractToken(p.content)
+}
+
 func (p *FullPage) ExtractCharacterClass() (ogame.CharacterClass, error) {
 	return p.e.ExtractCharacterClassFromDoc(p.GetDoc())
 }
@@ -68,6 +72,10 @@ func (p *FullPage) ExtractPlanet(v any) (ogame.Planet, error) {
 
 func (p *FullPage) ExtractPlanetCoordinate() (ogame.Coordinate, error) {
 	return p.e.ExtractPlanetCoordinate(p.content)
+}
+
+func (p *FullPage) ExtractPlanetID() (ogame.CelestialID, error) {
+	return p.e.ExtractPlanetID(p.content)
 }
 
 func (p *FullPage) ExtractMoons() []ogame.Moon {

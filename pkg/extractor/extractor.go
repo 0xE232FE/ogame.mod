@@ -16,6 +16,7 @@ import (
 type FullPageExtractorBytes interface {
 	ExtractAdmiral(pageHTML []byte) bool
 	ExtractAjaxChatToken(pageHTML []byte) (string, error)
+	ExtractToken(pageHTML []byte) (string, error)
 	ExtractCelestial(pageHTML []byte, v any) (ogame.Celestial, error)
 	ExtractCelestials(pageHTML []byte) ([]ogame.Celestial, error)
 	ExtractCharacterClass(pageHTML []byte) (ogame.CharacterClass, error)
@@ -183,7 +184,8 @@ type FacilitiesExtractorBytesDoc interface {
 }
 
 type PhalanxExtractorBytes interface {
-	ExtractPhalanx(pageHTML []byte) ([]ogame.Fleet, error)
+	ExtractPhalanx(pageHTML []byte) ([]ogame.PhalanxFleet, error)
+	ExtractPhalanxNewToken(pageHTML []byte) (string, error)
 }
 
 type PreferencesExtractorBytes interface {
@@ -261,6 +263,10 @@ type EventListExtractorBytesDoc interface {
 type TraderAuctioneerExtractorBytes interface {
 	ExtractAllResources(pageHTML []byte) (map[ogame.CelestialID]ogame.Resources, error)
 	ExtractAuction(pageHTML []byte) (ogame.Auction, error)
+}
+
+type AllianceOverviewExtractorBytes interface {
+	ExtractAllianceClass(pageHTML []byte) (ogame.AllianceClass, error)
 }
 
 // BuffActivationExtractorBytes BuffActivation is the popups that shows up when clicking the icon
@@ -459,6 +465,19 @@ type LfResearchExtractorBytesDoc interface {
 	LfResearchExtractorDoc
 }
 
+type LfBonusesExtractorBytes interface {
+	ExtractLfBonuses(pageHTML []byte) (ogame.LfBonuses, error)
+}
+
+type LfBonusesExtractorDoc interface {
+	ExtractLfBonusesFromDoc(doc *goquery.Document) (ogame.LfBonuses, error)
+}
+
+type LfBonusesExtractorBytesDoc interface {
+	LfBonusesExtractorBytes
+	LfBonusesExtractorDoc
+}
+
 // ResourcesBuildingsExtractorBytes supplies page
 type ResourcesBuildingsExtractorBytes interface {
 	ExtractResourcesBuildings(pageHTML []byte) (ogame.ResourcesBuildings, error)
@@ -508,7 +527,6 @@ type Extractor interface {
 	GetLifeformEnabled() bool
 	SetLifeformEnabled(lifeformEnabled bool)
 
-	AllianceClassExtractorBytesDoc
 	DefensesExtractorBytesDoc
 	EspionageReportExtractorBytesDoc
 	EventListExtractorBytesDoc
@@ -518,6 +536,7 @@ type Extractor interface {
 	HighscoreExtractorBytesDoc
 	LfBuildingsExtractorBytesDoc
 	LfResearchExtractorBytesDoc
+	LfBonusesExtractorBytesDoc
 	MessagesCombatReportExtractorBytesDoc
 	MessagesEspionageReportExtractorBytesDoc
 	MessagesExpeditionExtractorBytesDoc
@@ -546,6 +565,7 @@ type Extractor interface {
 	PremiumExtractorBytes
 	TraderAuctioneerExtractorBytes
 	TraderImportExportExtractorBytes
+	AllianceOverviewExtractorBytes
 
 	PlanetLayerExtractorDoc
 	TraderImportExportExtractorDoc

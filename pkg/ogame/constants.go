@@ -83,6 +83,28 @@ func (c AllianceClass) IsResearcher() bool {
 	return c == Researcher
 }
 
+// String ...
+func (c AllianceClass) String() string {
+	switch c {
+	case Warrior:
+		return "Warrior"
+	case Trader:
+		return "Trader"
+	case Researcher:
+		return "Researcher"
+	default:
+		return strconv.FormatInt(int64(c), 10)
+	}
+}
+
+// DMType ...
+type DMType string
+
+// IsValid ...
+func (t DMType) IsValid() bool {
+	return t == BuildingsDmType || t == ResearchDmType || t == ShipyardDmType
+}
+
 // CharacterClass ...
 type CharacterClass int64
 
@@ -182,6 +204,10 @@ func (c LifeformClass) IsKaelesh() bool {
 
 // OGame constants
 const (
+	BuildingsDmType DMType = "buildings"
+	ResearchDmType  DMType = "research"
+	ShipyardDmType  DMType = "shipyard"
+
 	NoClass    CharacterClass = 0
 	Collector  CharacterClass = 1
 	General    CharacterClass = 2

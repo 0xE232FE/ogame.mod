@@ -324,6 +324,27 @@ func (b *Prioritize) GetCachedResearch() ogame.Researches {
 	return b.bot.getCachedResearch()
 }
 
+// GetLfBonuses gets the lifeform bonuses
+func (b *Prioritize) GetLfBonuses() (ogame.LfBonuses, error) {
+	b.begin("GetLfBonuses")
+	defer b.done()
+	return b.bot.getLfBonuses()
+}
+
+// GetCachedLfBonuses gets the cached lifeform bonuses
+func (b *Prioritize) GetCachedLfBonuses() (ogame.LfBonuses, error) {
+	b.begin("GetCachedLfBonuses")
+	defer b.done()
+	return b.bot.getCachedLfBonuses()
+}
+
+// GetCachedAllianceClass ...
+func (b *Prioritize) GetCachedAllianceClass() (ogame.AllianceClass, error) {
+	b.begin("GetCachedAllianceClass")
+	defer b.done()
+	return b.bot.getCachedAllianceClass()
+}
+
 // GetResearch gets the player researches information
 func (b *Prioritize) GetResearch() (ogame.Researches, error) {
 	b.begin("GetResearch")
@@ -451,7 +472,7 @@ func (b *Prioritize) GetTechs(celestialID ogame.CelestialID) (ogame.ResourcesBui
 }
 
 // SendFleet sends a fleet
-func (b *Prioritize) SendFleet(celestialID ogame.CelestialID, ships []ogame.Quantifiable, speed ogame.Speed, where ogame.Coordinate,
+func (b *Prioritize) SendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos, speed ogame.Speed, where ogame.Coordinate,
 	mission ogame.MissionID, resources ogame.Resources, holdingTime, unionID int64) (ogame.Fleet, error) {
 	b.begin("SendFleet")
 	defer b.done()
@@ -473,7 +494,7 @@ func (b *Prioritize) SendDiscoveryFleet2(celestialID ogame.CelestialID, coord og
 }
 
 // EnsureFleet either sends all the requested ships or fail
-func (b *Prioritize) EnsureFleet(celestialID ogame.CelestialID, ships []ogame.Quantifiable, speed ogame.Speed, where ogame.Coordinate,
+func (b *Prioritize) EnsureFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos, speed ogame.Speed, where ogame.Coordinate,
 	mission ogame.MissionID, resources ogame.Resources, holdingTime, unionID int64) (ogame.Fleet, error) {
 	b.begin("EnsureFleet")
 	defer b.done()
@@ -585,9 +606,10 @@ func (b *Prioritize) FlightTime(origin, destination ogame.Coordinate, speed ogam
 	b.begin("FlightTime")
 	defer b.done()
 	researches := b.bot.getCachedResearch()
+	lfbonuses, _ := b.bot.getCachedLfBonuses()
 	return CalcFlightTime(origin, destination, b.bot.serverData.Galaxies, b.bot.serverData.Systems,
 		b.bot.serverData.DonutGalaxy, b.bot.serverData.DonutSystem, b.bot.serverData.GlobalDeuteriumSaveFactor,
-		float64(speed)/10, GetFleetSpeedForMission(b.bot.serverData, missionID), ships, researches, b.bot.characterClass)
+		float64(speed)/10, GetFleetSpeedForMission(b.bot.serverData, missionID), ships, researches, lfbonuses, b.bot.characterClass)
 }
 
 // Phalanx scan a coordinate from a moon to get fleets information
@@ -595,14 +617,14 @@ func (b *Prioritize) FlightTime(origin, destination ogame.Coordinate, speed ogam
 // IMPORTANT: This function DOES validate that the coordinate is a valid planet in range of phalanx
 //
 //	and that you have enough deuterium.
-func (b *Prioritize) Phalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame.Fleet, error) {
+func (b *Prioritize) Phalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame.PhalanxFleet, error) {
 	b.begin("Phalanx")
 	defer b.done()
 	return b.bot.getPhalanx(moonID, coord)
 }
 
 // UnsafePhalanx same as Phalanx but does not perform any input validation.
-func (b *Prioritize) UnsafePhalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame.Fleet, error) {
+func (b *Prioritize) UnsafePhalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame.PhalanxFleet, error) {
 	b.begin("Phalanx")
 	defer b.done()
 	return b.bot.getUnsafePhalanx(moonID, coord)
@@ -672,7 +694,7 @@ func (b *Prioritize) DoAuction(bid map[ogame.CelestialID]ogame.Resources) error 
 }
 
 // GetAllianceClass
-func (b *Prioritize) GetAllianceClass() ogame.AllianceClass {
+func (b *Prioritize) GetAllianceClass() (ogame.AllianceClass, error) {
 	b.begin("GetAllianceClass")
 	defer b.done()
 	return b.bot.getAllianceClass()
@@ -700,7 +722,7 @@ func (b *Prioritize) GetDMCosts(celestialID ogame.CelestialID) (ogame.DMCosts, e
 }
 
 // UseDM use dark matter to fast build
-func (b *Prioritize) UseDM(typ string, celestialID ogame.CelestialID) error {
+func (b *Prioritize) UseDM(typ ogame.DMType, celestialID ogame.CelestialID) error {
 	b.begin("UseDM")
 	defer b.done()
 	return b.bot.useDM(typ, celestialID)

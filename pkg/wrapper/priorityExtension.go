@@ -43,7 +43,8 @@ func (b *Prioritize) FlightTime2(origin, destination ogame.Coordinate, speed oga
 	b.begin("FlightTime")
 	defer b.done()
 	researches := b.bot.getCachedResearch()
+	lfbonuses, _ := b.bot.getCachedLfBonuses()
 	return CalcFlightTime2(origin, destination, b.bot.serverData.Galaxies, b.bot.serverData.Systems,
 		b.bot.serverData.DonutGalaxy, b.bot.serverData.DonutSystem, b.bot.serverData.GlobalDeuteriumSaveFactor,
-		float64(speed)/10, GetFleetSpeedForMission(b.bot.serverData, missionID), ships, researches, b.bot.characterClass, holdingTime)
+		float64(speed)/10, GetFleetSpeedForMission(b.bot.serverData, missionID), ships, researches, lfbonuses, b.bot.characterClass, holdingTime)
 }
