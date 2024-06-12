@@ -118,12 +118,12 @@ func Register(device *device.Device, ctx context.Context, lobby, email, password
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusInternalServerError {
+		return fmt.Errorf("gameforme internal server error : %s", resp.Status)
+	}
 	if resp.StatusCode == http.StatusConflict {
-		gfChallengeID := resp.Header.Get(ChallengeIDCookieName) // c434aa65-a064-498f-9ca4-98054bab0db8;https://challenge.gameforge.com
-		if gfChallengeID != "" {
-			parts := strings.Split(gfChallengeID, ";")
-			challengeID := parts[0]
-			return NewCaptchaRequiredError(challengeID)
+		if newChallengeID := extractChallengeID(resp); newChallengeID != "" {
+			return NewCaptchaRequiredError(newChallengeID)
 		}
 	}
 	by, err := utils.ReadBody(resp)
@@ -226,16 +226,15 @@ func RedeemCode(client httpclient.IHttpClient, ctx context.Context, lobby, beare
 	}
 	defer resp.Body.Close()
 	// {"tokenType":"accountTrading"}
-	type respStruct struct {
-		TokenType string `json:"tokenType"`
-	}
-	var respParsed respStruct
 	by, err := utils.ReadBody(resp)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode == http.StatusBadRequest {
 		return errors.New("invalid request, token invalid ?")
+	}
+	var respParsed struct {
+		TokenType string `json:"tokenType"`
 	}
 	if err := json.Unmarshal(by, &respParsed); err != nil {
 		return errors.New(err.Error() + " : " + string(by))
@@ -320,7 +319,7 @@ func AddAccount(device *device.Device, ctx context.Context, lobby, accountGroup,
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == http.StatusBadRequest {
+	if resp.StatusCode == http.StatusBadRequest { // Same status is returned when IP is temporarily blocked
 		return nil, errors.New("invalid request, account already in lobby ?")
 	}
 	var newAccount AddAccountRes
@@ -344,6 +343,16 @@ type GFLoginRes struct {
 }
 
 func (r GFLoginRes) GetBearerToken() string { return r.Token }
+
+func extractChallengeID(resp *http.Response) (challengeID string) {
+	gfChallengeID := resp.Header.Get(ChallengeIDCookieName)
+	if gfChallengeID != "" {
+		// c434aa65-a064-498f-9ca4-98054bab0db8;https://challenge.gameforge.com
+		parts := strings.Split(gfChallengeID, ";")
+		challengeID = parts[0]
+	}
+	return
+}
 
 func GFLogin(params *GfLoginParams) (out *GFLoginRes, err error) {
 	setDefaultParams(params)
@@ -374,10 +383,7 @@ func GFLogin(params *GfLoginParams) (out *GFLoginRes, err error) {
 	}
 
 	if resp.StatusCode == http.StatusConflict {
-		gfChallengeID := resp.Header.Get(ChallengeIDCookieName)
-		if gfChallengeID != "" {
-			parts := strings.Split(gfChallengeID, ";")
-			challengeID := parts[0]
+		if challengeID := extractChallengeID(resp); challengeID != "" {
 			return out, NewCaptchaRequiredError(challengeID)
 		}
 	}
