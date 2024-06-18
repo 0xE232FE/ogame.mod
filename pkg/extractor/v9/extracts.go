@@ -977,8 +977,11 @@ func extractUpgradeButtonEnabledFromDoc(doc *goquery.Document) (out bool) {
 
 func extractAvailableDiscoveriesFromDoc(doc *goquery.Document) int64 {
 	discoveryCount := doc.Find("div#galaxyHeaderDiscoveryCount").Text()
-	rgx := regexp.MustCompile(`(\d+)/(\d+)`)
+	rgx := regexp.MustCompile(`(\d+)\s*/\s*(\d+)`)
 	m := rgx.FindStringSubmatch(discoveryCount)
+	if len(m) != 3 {
+		return 0
+	}
 	usedString, totalString := m[1], m[2]
 	used := utils.DoParseI64(usedString)
 	total := utils.DoParseI64(totalString)
