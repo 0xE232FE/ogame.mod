@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+// https://board.en.ogame.gameforge.com/index.php?thread/835512-lifeforms-master-file/
+// https://ogame.comastuff.com/LFMaster903.xlsx
+
 // LazyLfResearches ...
 type LazyLfResearches func() LfResearches
 
@@ -457,9 +460,11 @@ func (b BaseLfResearch) ConstructionTime(level, universeSpeed int64, facilities 
 }
 
 // GetPrice returns the price to build the given level
-func (b BaseLfResearch) GetPrice(level int64, _ LfBonuses) Resources {
+func (b BaseLfResearch) GetPrice(level int64, lfb LfBonuses) Resources {
 	tmp := func(baseCost int64, increaseFactor float64, level int64) int64 {
-		return int64(float64(baseCost) * math.Pow(increaseFactor, float64(level-1)) * float64(level))
+		cost := float64(baseCost) * math.Pow(increaseFactor, float64(level-1)) * float64(level)
+		cost -= cost * lfb.PlanetLfResearchCostTimeBonus.Cost
+		return int64(cost)
 	}
 	return Resources{
 		Metal:     tmp(b.BaseCost.Metal, b.IncreaseFactor, level),

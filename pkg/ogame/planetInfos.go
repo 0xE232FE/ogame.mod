@@ -2,7 +2,6 @@ package ogame
 
 import (
 	"encoding/json"
-	"time"
 )
 
 // SystemInfos planets information for a specific system
@@ -133,7 +132,7 @@ type PlanetInfos struct {
 		IsBandit   bool
 		IsStarlord bool
 	}
-	Alliance    *AllianceInfos
+	Alliance *AllianceInfos
 	AllianceTag string
 	CanDiscover bool
 	Date        time.Time
