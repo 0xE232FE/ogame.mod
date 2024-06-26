@@ -233,7 +233,6 @@ func NewNoLogin(username, password, otpSecret, bearerToken, universe, lang strin
 	ext.SetLanguage(lang)
 	ext.SetLocation(time.UTC)
 	b.extractor = ext
-
 	factory := func() *Prioritize { return &Prioritize{bot: b} }
 	b.taskRunnerInst = taskRunner.NewTaskRunner(context.Background(), factory)
 
@@ -632,7 +631,7 @@ func (b *OGame) loginPart2(server Server) error {
 }
 
 func (b *OGame) loginPart3(userAccount Account, page parser.OverviewPage) error {
-	var ext extractor.Extractor = v11.NewExtractor()
+	var ext extractor.Extractor = v11_15_0.NewExtractor()
 	if ogVersion, err := version.NewVersion(b.serverData.Version); err == nil {
 		b.serverVersion = ogVersion
 		if b.IsVGreaterThanOrEqual("11.15.0") {
@@ -691,7 +690,7 @@ func (b *OGame) loginPart3(userAccount Account, page parser.OverviewPage) error 
 	chatHost := string(m[1])
 	chatPort := string(m[2])
 
-	if atomic.CompareAndSwapInt32(&b.chatConnectedAtom, 0, 1) {
+	if atomic.CompareAndSwapInt32(&b.chatConnectedAtom, 0, 1) && 1 == 2 {
 		b.closeChatCh = make(chan struct{})
 		go func(b *OGame) {
 			defer atomic.StoreInt32(&b.chatConnectedAtom, 0)
@@ -1354,9 +1353,11 @@ func (b *OGame) logout() {
 		select {
 		case <-b.closeChatCh:
 		default:
-			close(b.closeChatCh)
-			if b.ws != nil {
-				_ = b.ws.Close()
+			if b.closeChatCh != nil {
+				close(b.closeChatCh)
+				if b.ws != nil {
+					_ = b.ws.Close()
+				}
 			}
 		}
 	}

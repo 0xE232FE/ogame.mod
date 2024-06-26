@@ -5,10 +5,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/utils"
@@ -1271,29 +1273,142 @@ func GetStaticHandler(c echo.Context) error {
 // GetFromGameHandler ...
 func GetFromGameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
+	botMap := c.Get("botMap").(map[string]Prioritizable)
+	txTimerMap := c.Get("manualModeTimeout").(map[string]*time.Timer)
+	txTimer := txTimerMap["timeout"]
+
 	vals := url.Values{"page": {"ingame"}, "component": {"overview"}}
 	if len(c.QueryParams()) > 0 {
 		vals = c.QueryParams()
 	}
-	pageHTML, _ := bot.GetPageContent(vals)
+	locked, state := bot.GetState()
+	var pageHTML []byte
+	if locked && state == "manual mode" {
+		tx := botMap["tx"]
+		txTimer.Reset(30 * time.Second)
+		pageHTML, _ = tx.GetPageContent(vals)
+	} else {
+		pageHTML, _ = bot.GetPageContent(vals)
+	}
 	//pageHTML = replaceHostname(bot, pageHTML)
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
 	pageHTML = removeCookiesBanner(pageHTML)
+	pageHTML = ingameUi(pageHTML, state, locked)
+	//pageHTML = injectJS(pageHTML)
+
 	return c.HTMLBlob(http.StatusOK, pageHTML)
+}
+
+// var tx Prioritizable
+//var txTimer *time.Timer
+
+func ManualTimerTx(botMap map[string]Prioritizable, txTimer *time.Timer) {
+	tx := botMap["tx"]
+	select {
+	case <-txTimer.C:
+		tx.Done()
+		log.Println("Manual Mode Expired!")
+		// do something for timeout, like change state
+	}
+}
+
+func PostToggleManualModeHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	botMap := c.Get("botMap").(map[string]Prioritizable)
+	txTimerMap := c.Get("manualModeTimeout").(map[string]*time.Timer)
+	txTimer := txTimerMap["timeout"]
+
+	locked, state := bot.GetState()
+	if locked && state == "manual mode" {
+		txTimer.Stop()
+		tx := botMap["tx"]
+		tx.Done()
+		return c.JSON(http.StatusOK, false)
+	} else {
+		txTimer = time.NewTimer(30 * time.Second)
+		txTimerMap["timeout"] = txTimer
+		tx := bot.BeginNamed("manual mode")
+		botMap["tx"] = tx
+		go ManualTimerTx(botMap, txTimer)
+		return c.JSON(http.StatusOK, true)
+	}
+}
+
+func ingameUi(pageHTML []byte, state string, locked bool) []byte {
+	tmpHTML := string(pageHTML)
+
+	toReplace := `<script>
+	var btn1 = document.createElement("BUTTON");`
+	if state == "manual mode" && locked {
+		toReplace += `
+        var t = document.createTextNode("Manual mode (on)");
+		`
+	} else {
+		toReplace += `
+        var t = document.createTextNode("Manual mode (off)");
+		`
+	}
+	toReplace += `
+        btn1.style.height = '20px';
+        btn1.style.width = '130px';
+        btn1.style.display = 'block';
+        btn1.style.marginBottom = '3px';
+        btn1.appendChild(t);
+        btn1.onclick = function() {
+            var formData = new FormData();
+            $.ajax({
+                url: "/bot/toggle-manual-mode", data: formData, type: 'POST', processData: false, contentType: false,
+                success: function(res) {
+                    $(btn1).text("Manual mode (" + (res ? "on" : "off") + ")");
+                },
+                error: function(req) { console.log(req.responseText); },
+            });
+        };
+
+		var div = document.createElement("div");
+        div.style.position = 'fixed';
+        div.style.right = '10px';
+        div.style.top = '10px';
+        div.style.zIndex = '3001';
+        div.appendChild(btn1);
+
+		document.body.prepend(div);
+
+		</script>`
+
+	toReplace += `</body>`
+
+	tmpHTML = strings.ReplaceAll(tmpHTML, `</body>`, toReplace)
+	return []byte(tmpHTML)
 }
 
 // PostToGameHandler ...
 func PostToGameHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
+	botMap := c.Get("botMap").(map[string]Prioritizable)
+	txTimerMap := c.Get("manualModeTimeout").(map[string]*time.Timer)
+	txTimer := txTimerMap["timeout"]
+
 	vals := url.Values{"page": {"ingame"}, "component": {"overview"}}
 	if len(c.QueryParams()) > 0 {
 		vals = c.QueryParams()
 	}
 	payload, _ := c.FormParams()
-	pageHTML, _ := bot.PostPageContent(vals, payload)
+	locked, state := bot.GetState()
+	var pageHTML []byte
+	if state == "manual mode" && locked {
+		txTimer.Reset(30 * time.Second)
+		tx := botMap["tx"]
+		pageHTML, _ = tx.PostPageContent(vals, payload)
+	} else {
+		pageHTML, _ = bot.PostPageContent(vals, payload)
+	}
 	//pageHTML = replaceHostname(bot, pageHTML)
 	pageHTML = replaceHostnameWithRegxp(bot, pageHTML, c.Request())
 	pageHTML = removeCookiesBanner(pageHTML)
+	pageHTML = ingameUi(pageHTML, state, locked)
+	//pageHTML = injectJS(pageHTML)
+
 	return c.HTMLBlob(http.StatusOK, pageHTML)
 }
 
@@ -1651,9 +1766,13 @@ func GetPublicIPHandler(c echo.Context) error {
 }
 
 func removeCookiesBanner(pageHTML []byte) []byte {
-	regex := `<script[^>]*id="cookiebanner"[^>]*>[\s\S]*?</script>`
-	re := regexp.MustCompile(regex)
-	return re.ReplaceAll(pageHTML, []byte(""))
+	pageHTMLstr := string(pageHTML)
+	pageHTMLstr = strings.ReplaceAll(pageHTMLstr, "https://consent.gameforge.com/cookiebanner.js", "")
+	pageHTMLstr = strings.ReplaceAll(pageHTMLstr, "https://consent-sandbox.gameforge.com/cookiebanner.js", "")
+	// regex := `<script[^>]*id="cookiebanner"[^>]*>[\s\S]*?</script>`
+	// re := regexp.MustCompile(regex)
+	// return re.ReplaceAll(pageHTML, []byte(""))
+	return []byte(pageHTMLstr)
 }
 
 func replaceHostnameWithRegxp(bot *OGame, pageHTML []byte, r *http.Request) []byte {

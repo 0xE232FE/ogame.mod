@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alaingilbert/ogame/pkg/device"
 	"github.com/alaingilbert/ogame/pkg/tlsclientconfig"
@@ -349,12 +350,19 @@ func start(c *cli.Context) error {
 	if corsEnabled {
 		e.Use(middleware.CORS())
 	}
+
+	var manualModeTimeout map[string]*time.Timer = map[string]*time.Timer{}
+
+	var botMap map[string]wrapper.Prioritizable = map[string]wrapper.Prioritizable{}
+
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			ctx.Set("bot", bot)
 			ctx.Set("version", version)
 			ctx.Set("commit", commit)
 			ctx.Set("date", date)
+			ctx.Set("manualModeTimeout", manualModeTimeout)
+			ctx.Set("botMap", botMap)
 			return next(ctx)
 		}
 	})
@@ -477,6 +485,7 @@ func start(c *cli.Context) error {
 	// Get/Post Page Content
 	e.GET("/game/index.php", wrapper.GetFromGameHandler)
 	e.POST("/game/index.php", wrapper.PostToGameHandler)
+	e.POST("/bot/toggle-manual-mode", wrapper.PostToggleManualModeHandler)
 
 	// For AntiGame plugin
 	// Static content
