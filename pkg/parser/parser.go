@@ -47,6 +47,7 @@ type ResourcesSettingsPage struct{ FullPage }
 type ResearchPage struct{ FullPage }
 type FacilitiesPage struct{ FullPage }
 type ShipyardPage struct{ FullPage }
+type FleetDispatchPage struct{ FullPage }
 type DefensesPage struct{ FullPage }
 type MovementPage struct{ FullPage }
 type LfBuildingsPage struct{ FullPage }
@@ -67,6 +68,7 @@ type FullPagePages interface {
 		//TraderResourcesPageContent |
 		ResearchPage |
 		ShipyardPage |
+		FleetDispatchPage |
 		DefensesPage |
 		//FleetDispatchPageContent |
 		MovementPage |
@@ -109,6 +111,7 @@ type IFullPage interface {
 	ExtractTechnocrat() bool
 	ExtractColonies() (int64, int64)
 	ExtractServerTime() (time.Time, error)
+	ExtractResources() ogame.Resources
 }
 
 func AutoParseFullPage(e extractor.Extractor, pageHTML []byte) (out IFullPage) {
@@ -147,6 +150,11 @@ func ParsePage[T FullPagePages](e extractor.Extractor, pageHTML []byte) (*T, err
 	case ShipyardPage:
 		if bytes.Contains(pageHTML, []byte(`currentPage = "shipyard";`)) {
 			tt := T(ShipyardPage{fullPage})
+			return &tt, nil
+		}
+	case FleetDispatchPage:
+		if bytes.Contains(pageHTML, []byte(`currentPage = "fleetdispatch";`)) {
+			tt := T(FleetDispatchPage{fullPage})
 			return &tt, nil
 		}
 	case ResearchPage:

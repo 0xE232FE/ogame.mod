@@ -95,6 +95,8 @@ func getPage[T parser.FullPagePages](b *OGame, opts ...Option) (*T, error) {
 		pageName = LfResearchPageName
 	case parser.ShipyardPage:
 		pageName = ShipyardPageName
+	case parser.FleetDispatchPage:
+		pageName = FleetdispatchPageName
 	case parser.ResourcesSettingsPage:
 		pageName = ResourceSettingsPageName
 	case parser.FacilitiesPage:
