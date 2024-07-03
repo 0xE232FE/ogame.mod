@@ -293,11 +293,12 @@ func (b *OGame) ninjaSendFleet(celestialID ogame.CelestialID, ships []ogame.Quan
 	if len(resStruct.Errors) > 0 {
 		return ogame.Fleet{}, errors.New(resStruct.Errors[0].Message + " (" + strconv.FormatInt(resStruct.Errors[0].Error, 10) + ")")
 	}
+	allianceClass, _ := b.getCachedAllianceClass()
 	origin, _ = b.getCachedCelestial(celestialID)
 	secs, _ := CalcFlightTime2(
 		origin.GetCoordinate(), where,
 		b.serverData.Galaxies, b.serverData.Systems, b.serverData.DonutGalaxy, b.serverData.DonutSystem, b.serverData.GlobalDeuteriumSaveFactor,
-		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), b.getCachedResearch(), lfbonus, b.characterClass, holdingTime)
+		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), b.getCachedResearch(), lfbonus, b.characterClass, allianceClass, holdingTime)
 
 	if resStruct.Success == true {
 		return ogame.Fleet{
@@ -501,11 +502,13 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 	multiplier := float64(b.GetServerData().CargoHyperspaceTechMultiplier) / 100.0
 	fuelCapacity := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1)
 
+	allianceClass, _ := b.getCachedAllianceClass()
+
 	orogin, _ := b.getCachedCelestial(celestialID)
 	_, fuel := CalcFlightTime2(
 		orogin.GetCoordinate(), where,
 		b.serverData.Galaxies, b.serverData.Systems, b.serverData.DonutGalaxy, b.serverData.DonutSystem, b.serverData.GlobalDeuteriumSaveFactor,
-		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), techs, lfbonus, b.characterClass, holdingTime)
+		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), techs, lfbonus, b.characterClass, allianceClass, holdingTime)
 	if fuelCapacity < fuel {
 		return ogame.Fleet{}, fmt.Errorf("not enough fuel capacity, available " + strconv.FormatInt(fuelCapacity, 10) + " but needed " + strconv.FormatInt(fuel, 10))
 	}
@@ -679,7 +682,7 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 	secs, _ := CalcFlightTime2(
 		origin.GetCoordinate(), where,
 		b.serverData.Galaxies, b.serverData.Systems, b.serverData.DonutGalaxy, b.serverData.DonutSystem, b.serverData.GlobalDeuteriumSaveFactor,
-		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), techs, lfbonus, b.characterClass, holdingTime)
+		float64(speed)/10, GetFleetSpeedForMission(b.serverData, mission), ogame.ShipsInfos{}.FromQuantifiables(ships), techs, lfbonus, b.characterClass, allianceClass, holdingTime)
 
 	// Check latest fleetID
 	pageHTMLEventList2, err := b.getPageContent(eventVals)
@@ -1415,16 +1418,16 @@ func (b *OGame) buyItem(ref string, celestialID ogame.CelestialID) error {
 
 // CalcFlightTime ...
 func CalcFlightTime2(origin, destination ogame.Coordinate, universeSize, nbSystems int64, donutGalaxy, donutSystem bool,
-	fleetDeutSaveFactor, speed float64, universeSpeedFleet int64, ships ogame.ShipsInfos, techs ogame.Researches, lfBonuses ogame.LfBonuses, characterClass ogame.CharacterClass, holdingTime int64) (secs, fuel int64) {
+	fleetDeutSaveFactor, speed float64, universeSpeedFleet int64, ships ogame.ShipsInfos, techs ogame.Researches, lfBonuses ogame.LfBonuses, characterClass ogame.CharacterClass, allianceClass ogame.AllianceClass, holdingTime int64) (secs, fuel int64) {
 	if !ships.HasFlyableShips() {
 		return
 	}
-	v := findSlowestSpeed(ships, techs, lfBonuses, characterClass)
+	v := findSlowestSpeed(ships, techs, lfBonuses, characterClass, allianceClass)
 	d := float64(Distance(origin, destination, universeSize, nbSystems, donutGalaxy, donutSystem))
 
 	secs = CalcFlightTimeWithBaseSpeed(origin, destination, universeSize, nbSystems, donutGalaxy, donutSystem, speed, v, universeSpeedFleet)
 	//secs = int64(math.Round(((3500/s)*math.Sqrt(d*10/v) + 10) / a))
-	fuel = calcFuel2(ships, int64(d), secs, float64(universeSpeedFleet), fleetDeutSaveFactor, techs, lfBonuses, characterClass, holdingTime)
+	fuel = calcFuel2(ships, int64(d), secs, float64(universeSpeedFleet), fleetDeutSaveFactor, techs, lfBonuses, characterClass, allianceClass, holdingTime)
 
 	return
 }
@@ -1432,12 +1435,13 @@ func CalcFlightTime2(origin, destination ogame.Coordinate, universeSize, nbSyste
 // CalcFlightTime calculates the flight time and the fuel consumption
 func (b *OGame) CalcFlightTime2(origin, destination ogame.Coordinate, speed float64, ships ogame.ShipsInfos, missionID ogame.MissionID, holdingTime int64) (secs, fuel int64) {
 	lfbonus, _ := b.getCachedLfBonuses()
+	allianceClass, _ := b.getCachedAllianceClass()
 	return CalcFlightTime2(origin, destination, b.serverData.Galaxies, b.serverData.Systems, b.serverData.DonutGalaxy,
 		b.serverData.DonutSystem, b.serverData.GlobalDeuteriumSaveFactor, speed, GetFleetSpeedForMission(b.serverData, missionID), ships,
-		b.GetCachedResearch(), lfbonus, b.characterClass, holdingTime)
+		b.GetCachedResearch(), lfbonus, b.characterClass, allianceClass, holdingTime)
 }
 
-func calcFuel2(ships ogame.ShipsInfos, dist, duration int64, universeSpeedFleet, fleetDeutSaveFactor float64, techs ogame.Researches, lfBonuses ogame.LfBonuses, characterClass ogame.CharacterClass, holdingTime int64) (fuel int64) {
+func calcFuel2(ships ogame.ShipsInfos, dist, duration int64, universeSpeedFleet, fleetDeutSaveFactor float64, techs ogame.Researches, lfBonuses ogame.LfBonuses, characterClass ogame.CharacterClass, allianceClass ogame.AllianceClass, holdingTime int64) (fuel int64) {
 	tmpFn := func(baseFuel, nbr, shipSpeed, holdingTime int64) float64 {
 		tmpSpeed := (35000 / (float64(duration)*universeSpeedFleet - 10)) * math.Sqrt(float64(dist)*10/float64(shipSpeed))
 		if holdingTime > 0 {
@@ -1452,7 +1456,7 @@ func calcFuel2(ships ogame.ShipsInfos, dist, duration int64, universeSpeedFleet,
 		}
 		nbr := ships.ByID(ship.GetID())
 		if nbr > 0 {
-			tmpFuel += tmpFn(ship.GetFuelConsumption(techs, lfBonuses, characterClass, fleetDeutSaveFactor), nbr, ship.GetSpeed(techs, lfBonuses, characterClass), holdingTime)
+			tmpFuel += tmpFn(ship.GetFuelConsumption(techs, lfBonuses, characterClass, fleetDeutSaveFactor), nbr, ship.GetSpeed(techs, lfBonuses, characterClass, allianceClass), holdingTime)
 		}
 	}
 	fuel = int64(1 + math.Round(tmpFuel))
