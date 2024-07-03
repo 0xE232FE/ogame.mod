@@ -53,6 +53,7 @@ type Prioritizable interface {
 	BeginNamed(name string) Prioritizable
 	BuyMarketplace(itemID int64, celestialID ogame.CelestialID) error
 	BuyOfferOfTheDay() error
+	BuyResetTree(planetID ogame.PlanetID, tier int64) error
 	CancelFleet(ogame.FleetID) error
 	CollectAllMarketplaceMessages() error
 	CollectMarketplaceMessage(ogame.MarketplaceMessage) error
@@ -62,6 +63,7 @@ type Prioritizable interface {
 	DoAuction(bid map[ogame.CelestialID]ogame.Resources) error
 	Done()
 	FlightTime(origin, destination ogame.Coordinate, speed ogame.Speed, ships ogame.ShipsInfos, mission ogame.MissionID) (secs, fuel int64)
+	FreeResetTree(planetID ogame.PlanetID, tier int64) error
 	GalaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemInfos, error)
 	GetActiveItems(ogame.CelestialID) ([]ogame.ActiveItem, error)
 	GetAllianceClass() (ogame.AllianceClass, error)
@@ -108,6 +110,9 @@ type Prioritizable interface {
 	OfferSellMarketplace(itemID any, quantity, priceType, price, priceRange int64, celestialID ogame.CelestialID) error
 	PostPageContent(url.Values, url.Values) ([]byte, error)
 	RecruitOfficer(typ, days int64) error
+	SelectLfResearchArtifacts(planetID ogame.PlanetID, slotNumber int64, techID ogame.ID) error
+	SelectLfResearchRandom(planetID ogame.PlanetID, slotNumber int64) error
+	SelectLfResearchSelect(planetID ogame.PlanetID, slotNumber int64) error
 	SendMessage(playerID int64, message string) error
 	SendMessageAlliance(associationID int64, message string) error
 	ServerTime() (time.Time, error)
@@ -135,6 +140,7 @@ type Prioritizable interface {
 	GetFacilities(ogame.CelestialID, ...Option) (ogame.Facilities, error)
 	GetLfBuildings(ogame.CelestialID, ...Option) (ogame.LfBuildings, error)
 	GetLfResearch(ogame.CelestialID, ...Option) (ogame.LfResearches, error)
+	GetLfResearchDetails(ogame.CelestialID, ...Option) (ogame.LfResearchDetails, error)
 	GetProduction(ogame.CelestialID) ([]ogame.Quantifiable, int64, error)
 	GetResources(ogame.CelestialID) (ogame.Resources, error)
 	GetResourcesBuildings(ogame.CelestialID, ...Option) (ogame.ResourcesBuildings, error)

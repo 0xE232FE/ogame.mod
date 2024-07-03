@@ -436,6 +436,32 @@ func (b LfResearches) ByID(id ID) *int64 {
 	return nil
 }
 
+// LfSlot ...
+type LfSlot struct {
+	TechID  ID
+	Level   int64
+	Allowed bool
+	Locked  bool
+}
+
+// LfResearchDetails ...
+type LfResearchDetails struct {
+	LfResearches
+	Slots              [18]LfSlot
+	ArtefactsCollected int64
+	ArtefactsLimit     int64
+}
+
+// AvailableSlot return the slotNumber (1-18) available for research. 0 if none is available.
+func (d *LfResearchDetails) AvailableSlot() int64 {
+	for idx, slot := range d.Slots {
+		if slot.Allowed {
+			return int64(idx) + 1
+		}
+	}
+	return 0
+}
+
 // BaseLfResearch base struct for Lifeform techs
 type BaseLfResearch struct {
 	BaseTechnology

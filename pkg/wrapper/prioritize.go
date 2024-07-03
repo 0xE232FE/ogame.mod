@@ -792,6 +792,13 @@ func (b *Prioritize) GetLfResearch(celestialID ogame.CelestialID, options ...Opt
 	return b.bot.getLfResearch(celestialID, options...)
 }
 
+// GetLfResearchDetails ...
+func (b *Prioritize) GetLfResearchDetails(celestialID ogame.CelestialID, options ...Option) (ogame.LfResearchDetails, error) {
+	b.begin("GetLfResearch")
+	defer b.done()
+	return b.bot.getLfResearchDetails(celestialID, options...)
+}
+
 // GetAvailableDiscoveries ...
 func (b *Prioritize) GetAvailableDiscoveries(opts ...Option) int64 {
 	b.begin("GetAvailableDiscoveries")
@@ -804,4 +811,39 @@ func (b *Prioritize) GetPositionsAvailableForDiscoveryFleet(galaxy int64, system
 	b.begin("GetPositionsAvailableForDiscoveryFleet")
 	defer b.done()
 	return b.bot.getPositionsAvailableForDiscoveryFleet(galaxy, system, opts...)
+}
+
+// SelectLfResearchSelect select a lifeform research
+func (b *Prioritize) SelectLfResearchSelect(planetID ogame.PlanetID, slotNumber int64) error {
+	b.begin("SelectLfResearchSelect")
+	defer b.done()
+	return b.bot.selectLfResearchSelect(planetID, slotNumber)
+}
+
+// SelectLfResearchRandom select a random lifeform research
+func (b *Prioritize) SelectLfResearchRandom(planetID ogame.PlanetID, slotNumber int64) error {
+	b.begin("SelectLfResearchRandom")
+	defer b.done()
+	return b.bot.selectLfResearchRandom(planetID, slotNumber)
+}
+
+// SelectLfResearchArtifacts select a lifeform research using artifacts
+func (b *Prioritize) SelectLfResearchArtifacts(planetID ogame.PlanetID, slotNumber int64, techID ogame.ID) error {
+	b.begin("SelectLfResearchArtifacts")
+	defer b.done()
+	return b.bot.selectLfResearchArtifacts(planetID, slotNumber, techID)
+}
+
+// FreeResetTree reset a lifeform research tier tree
+func (b *Prioritize) FreeResetTree(planetID ogame.PlanetID, tier int64) error {
+	b.begin("FreeResetTree")
+	defer b.done()
+	return b.bot.freeResetTree(planetID, tier)
+}
+
+// BuyResetTree reset a lifeform research tier tree using darkmatter
+func (b *Prioritize) BuyResetTree(planetID ogame.PlanetID, tier int64) error {
+	b.begin("BuyResetTree")
+	defer b.done()
+	return b.bot.buyResetTree(planetID, tier)
 }

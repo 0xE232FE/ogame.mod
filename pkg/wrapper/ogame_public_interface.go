@@ -367,6 +367,31 @@ func (b *OGame) GetUserInfos() (ogame.UserInfos, error) {
 	return b.WithPriority(taskRunner.Normal).GetUserInfos()
 }
 
+// SelectLfResearchSelect select a lifeform research
+func (b *OGame) SelectLfResearchSelect(planetID ogame.PlanetID, slotNumber int64) error {
+	return b.WithPriority(taskRunner.Normal).SelectLfResearchSelect(planetID, slotNumber)
+}
+
+// SelectLfResearchRandom select a random lifeform research
+func (b *OGame) SelectLfResearchRandom(planetID ogame.PlanetID, slotNumber int64) error {
+	return b.WithPriority(taskRunner.Normal).SelectLfResearchRandom(planetID, slotNumber)
+}
+
+// SelectLfResearchArtifacts select a lifeform research using artifacts
+func (b *OGame) SelectLfResearchArtifacts(planetID ogame.PlanetID, slotNumber int64, techID ogame.ID) error {
+	return b.WithPriority(taskRunner.Normal).SelectLfResearchArtifacts(planetID, slotNumber, techID)
+}
+
+// FreeResetTree reset a lifeform research tier tree
+func (b *OGame) FreeResetTree(planetID ogame.PlanetID, tier int64) error {
+	return b.WithPriority(taskRunner.Normal).FreeResetTree(planetID, tier)
+}
+
+// BuyResetTree reset a lifeform research tier tree using darkmatter
+func (b *OGame) BuyResetTree(planetID ogame.PlanetID, tier int64) error {
+	return b.WithPriority(taskRunner.Normal).BuyResetTree(planetID, tier)
+}
+
 // SendMessage sends a message to playerID
 func (b *OGame) SendMessage(playerID int64, message string) error {
 	return b.WithPriority(taskRunner.Normal).SendMessage(playerID, message)
@@ -818,6 +843,11 @@ func (b *OGame) GetLfBuildings(celestialID ogame.CelestialID, opts ...Option) (o
 // GetLfResearch ...
 func (b *OGame) GetLfResearch(celestialID ogame.CelestialID, opts ...Option) (ogame.LfResearches, error) {
 	return b.WithPriority(taskRunner.Normal).GetLfResearch(celestialID, opts...)
+}
+
+// GetLfResearchDetails ...
+func (b *OGame) GetLfResearchDetails(celestialID ogame.CelestialID, opts ...Option) (ogame.LfResearchDetails, error) {
+	return b.WithPriority(taskRunner.Normal).GetLfResearchDetails(celestialID, opts...)
 }
 
 // SendDiscoveryFleet ...
