@@ -269,6 +269,10 @@ func start(c *cli.Context) error {
 	deviceLang := c.String("device-lang")
 	deviceUserAgent := c.String("device-user-agent")
 
+	if username == "" || password == "" {
+		log.Fatal("Username or Password missing.")
+	}
+
 	deviceSystem = strings.ToLower(deviceSystem)
 	var deviceSystemParam device.Os
 	switch deviceSystem {
