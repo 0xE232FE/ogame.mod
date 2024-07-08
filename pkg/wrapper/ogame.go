@@ -9,12 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -826,7 +828,8 @@ func IsAjaxPage(vals url.Values) bool {
 	page := getPageName(vals)
 	ajax := vals.Get("ajax")
 	asJson := vals.Get("asJson")
-	return ajax == "1" ||
+	return vals.Get("page") == "ajax" ||
+		ajax == "1" ||
 		asJson == "1" ||
 		utils.InArr(page, []string{
 			FetchEventboxAjaxPageName,
@@ -910,20 +913,15 @@ func (b *OGame) execRequest(method, finalURL string, payload, vals url.Values) (
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= http.StatusInternalServerError {
-		return []byte{}, err
+		return []byte{}, nil
 	}
-	by, err := utils.ReadBody(resp)
-	if err != nil {
-		return []byte{}, err
-	}
-	return by, nil
+	return utils.ReadBody(resp)
 }
 
 func getPageName(vals url.Values) string {
 	page := vals.Get("page")
 	component := vals.Get("component")
 	if page == "ingame" ||
-		page == "ajax" ||
 		(page == "componentOnly" && component == FetchEventboxAjaxPageName) ||
 		(page == "componentOnly" && component == EventListAjaxPageName && vals.Get("action") != "fetchEventBox") {
 		page = component
@@ -1025,6 +1023,37 @@ func (b *OGame) pageContent(method string, vals, payload url.Values, opts ...Opt
 
 		if detectLoggedOut(method, page, vals, pageHTMLBytes) {
 			b.error("Err not logged on page : ", page)
+
+			if home, err := os.UserHomeDir(); err == nil {
+				type FileInfo struct {
+					Name    string
+					ModTime time.Time
+				}
+				notLoggedPath := filepath.Join(home, ".ogame", "not_logged")
+				if err := os.MkdirAll(notLoggedPath, 0755); err == nil {
+					if files, err := ioutil.ReadDir(notLoggedPath); err == nil {
+						// Create a slice to hold file info
+						fileInfos := make([]FileInfo, 0, len(files))
+						for _, file := range files {
+							if !file.IsDir() {
+								fileInfos = append(fileInfos, FileInfo{
+									Name:    file.Name(),
+									ModTime: file.ModTime(),
+								})
+							}
+						}
+						sort.Slice(fileInfos, func(i, j int) bool { return fileInfos[i].ModTime.After(fileInfos[j].ModTime) })
+						if len(fileInfos) > 20 {
+							for _, file := range fileInfos[20:] {
+								_ = os.Remove(filepath.Join(notLoggedPath, file.Name))
+							}
+						}
+						filename := fmt.Sprintf("not_logged_%s_%s_.html", page, time.Now().Format("2006-01-02_15:04:05"))
+						_ = os.WriteFile(filepath.Join(notLoggedPath, filename), pageHTMLBytes, 0644)
+					}
+				}
+			}
+
 			b.isConnectedAtom.Store(false)
 			return ogame.ErrNotLogged
 		}
@@ -1072,14 +1101,19 @@ func alterPayload(method string, b *OGame, vals, payload url.Values) {
 }
 
 func processResponseHTML(method string, b *OGame, pageHTML []byte, page string, payload, vals url.Values, SkipCacheFullPage bool) error {
+	isAjax := IsAjaxPage(vals)
 	switch method {
 	case http.MethodGet:
-		if !IsAjaxPage(vals) && !IsEmpirePage(vals) && v6.IsLogged(pageHTML) {
+		if !isAjax && !IsEmpirePage(vals) && v6.IsLogged(pageHTML) {
 			if !SkipCacheFullPage {
 				parsedFullPage := parser.AutoParseFullPage(b.extractor, pageHTML)
 				b.cacheFullPageInfo(parsedFullPage)
 			}
-		} else if IsAjaxPage(vals) && vals.Get("component") == "alliance" && vals.Get("tab") == "overview" && vals.Get("action") == "fetchOverview" {
+		} else if vals.Get("page") == "ajax" && vals.Get("component") == "lfbonuses" {
+			if bonuses, err := b.extractor.ExtractLfBonuses(pageHTML); err == nil {
+				b.lfBonuses = &bonuses
+			}
+		} else if isAjax && vals.Get("component") == "alliance" && vals.Get("tab") == "overview" && vals.Get("action") == "fetchOverview" {
 			if !SkipCacheFullPage {
 				var res parser.AllianceOverviewTabRes
 				if err := json.Unmarshal(pageHTML, &res); err == nil {
@@ -1088,7 +1122,7 @@ func processResponseHTML(method string, b *OGame, pageHTML []byte, page string, 
 					b.token = res.NewAjaxToken
 				}
 			}
-		} else if IsAjaxPage(vals) {
+		} else if isAjax {
 			var res struct {
 				NewAjaxToken string `json:"newAjaxToken"`
 			}
@@ -1107,7 +1141,7 @@ func processResponseHTML(method string, b *OGame, pageHTML []byte, page string, 
 			if err := extractNewChatToken(b, pageHTML); err != nil {
 				return err
 			}
-		} else if IsAjaxPage(vals) {
+		} else if isAjax {
 			var res struct {
 				NewAjaxToken string `json:"newAjaxToken"`
 			}
@@ -1989,34 +2023,6 @@ func (b *OGame) createUnion(fleet ogame.Fleet, unionUsers []string) (int64, erro
 	return res.UnionID, nil
 }
 
-func (b *OGame) getAllianceClass() (out ogame.AllianceClass, err error) {
-	pageHTML, err := b.getPage("alliance")
-	if err != nil {
-		return
-	}
-	token, err := b.extractor.ExtractToken(pageHTML)
-	if err != nil {
-		return
-	}
-	vals := url.Values{"page": {"ingame"}, "component": {"alliance"}, "tab": {"overview"}, "action": {"fetchOverview"}, "ajax": {"1"}, "token": {token}}
-	pageHTML, err = b.getPageContent(vals, SkipCacheFullPage)
-	if err != nil {
-		return
-	}
-	if len(pageHTML) == 0 {
-		tmp := ogame.NoAllianceClass
-		b.allianceClass = &tmp
-		return *b.allianceClass, nil
-	}
-	var res parser.AllianceOverviewTabRes
-	if err = json.Unmarshal(pageHTML, &res); err != nil {
-		return
-	}
-	allianceClass, _ := b.extractor.ExtractAllianceClass([]byte(res.Content.AllianceAllianceOverview))
-	b.allianceClass = &allianceClass
-	return *b.allianceClass, nil
-}
-
 func (b *OGame) highscore(category, typ, page int64) (out ogame.Highscore, err error) {
 	if category < 1 || category > 2 {
 		return out, errors.New("category must be in [1, 2] (1:player, 2:alliance)")
@@ -2663,6 +2669,38 @@ func (b *OGame) getCachedAllianceClass() (out ogame.AllianceClass, err error) {
 	if b.allianceClass == nil {
 		return b.getAllianceClass()
 	}
+	return *b.allianceClass, nil
+}
+
+func (b *OGame) getAllianceClass() (out ogame.AllianceClass, err error) {
+	pageHTML, err := b.getPage("alliance")
+	if err != nil {
+		return
+	}
+	token, err := b.extractor.ExtractToken(pageHTML)
+	if err != nil {
+		return
+	}
+	if bytes.Contains(pageHTML, []byte("createNewAlliance")) {
+		b.allianceClass = utils.Ptr(ogame.NoAllianceClass)
+		return *b.allianceClass, nil
+	}
+	vals := url.Values{"page": {"ingame"}, "component": {"alliance"}, "tab": {"overview"}, "action": {"fetchOverview"}, "ajax": {"1"}, "token": {token}}
+	pageHTML, err = b.getPageContent(vals, SkipCacheFullPage)
+	if err != nil {
+		return
+	}
+	if len(pageHTML) == 0 {
+		b.allianceClass = utils.Ptr(ogame.NoAllianceClass)
+		return *b.allianceClass, nil
+	}
+	var res parser.AllianceOverviewTabRes
+	if err = json.Unmarshal(pageHTML, &res); err != nil {
+		return
+	}
+	allianceClass, _ := b.extractor.ExtractAllianceClass([]byte(res.Content.AllianceAllianceOverview))
+	b.allianceClass = &allianceClass
+	b.token = res.NewAjaxToken
 	return *b.allianceClass, nil
 }
 
