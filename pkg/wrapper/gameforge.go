@@ -472,6 +472,7 @@ func SolveChallenge(client httpclient.IHttpClient, ctx context.Context, challeng
 	body := strings.NewReader(`{"answer":` + utils.FI64(answer) + `}`)
 	req, _ := http.NewRequest(http.MethodPost, challengeURL, body)
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	req.WithContext(ctx)
 	resp, err := client.Do(req)
 	if err != nil {

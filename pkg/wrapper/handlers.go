@@ -65,15 +65,6 @@ func GetServerDataHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(bot.serverData))
 }
 
-// SetUserAgentHandler ...
-// curl 127.0.0.1:1234/bot/set-user-agent -d 'userAgent="New user agent"'
-func SetUserAgentHandler(c echo.Context) error {
-	bot := c.Get("bot").(*OGame)
-	userAgent := c.Request().PostFormValue("userAgent")
-	bot.SetUserAgent(userAgent)
-	return c.JSON(http.StatusOK, SuccessResp(nil))
-}
-
 // ServerURLHandler ...
 func ServerURLHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
@@ -1717,11 +1708,11 @@ func GetCaptchaSolverHandler(c echo.Context) error {
 		bot.error(err)
 	}
 
-	if !bot.IsLoggedIn() {
-		if err := bot.Login(); err != nil {
-			bot.error(err)
-		}
-	}
+	// if !bot.IsLoggedIn() {
+	// 	if err := bot.Login(); err != nil {
+	// 		bot.error(err)
+	// 	}
+	// }
 	return c.Redirect(http.StatusTemporaryRedirect, "/")
 }
 

@@ -5,6 +5,9 @@ import "errors"
 // ErrNotLogged returned when the bot is not logged
 var ErrNotLogged = errors.New("not logged")
 
+// ErrLoginLink returned when account is somewhat banned, cannot login for no apparent reason
+var ErrLoginLink = errors.New("failed to get login link")
+
 // ErrMobileView returned when the bot is in mobile view
 var ErrMobileView = errors.New("mobile view not supported")
 

@@ -387,6 +387,9 @@ func start(c *cli.Context) error {
 	e.GET("/", wrapper.HomeHandler)
 	e.GET("/tasks", wrapper.TasksHandler)
 
+	e.GET("/bot/add-account/:number/:lang", AddAccountHandler)
+	e.GET("/bot/accounts", GetAccountsHandler)
+
 	// CAPTCHA Handler
 	e.GET("/bot/captcha", wrapper.GetCaptchaHandler)
 	e.POST("/bot/captcha/solve", wrapper.GetCaptchaSolverHandler)
@@ -395,7 +398,6 @@ func start(c *cli.Context) error {
 	e.GET("/bot/ip", wrapper.GetPublicIPHandler)
 	e.GET("/bot/server", wrapper.GetServerHandler)
 	e.GET("/bot/server-data", wrapper.GetServerDataHandler)
-	e.POST("/bot/set-user-agent", wrapper.SetUserAgentHandler)
 	e.GET("/bot/server-url", wrapper.ServerURLHandler)
 	e.GET("/bot/language", wrapper.GetLanguageHandler)
 	e.GET("/bot/empire/type/:typeID", wrapper.GetEmpireHandler)
