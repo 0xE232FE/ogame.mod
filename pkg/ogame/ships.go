@@ -159,13 +159,21 @@ func (s ShipsInfos) CountShips() (out int64) {
 func (s *ShipsInfos) Add(v ShipsInfos) {
 	for _, ship := range Ships {
 		shipID := ship.GetID()
-		s.Set(shipID, s.ByID(shipID)+v.ByID(shipID))
+		s.Set(shipID, utils.MaxInt(s.ByID(shipID)+v.ByID(shipID), 0))
+	}
+}
+
+// Sub subtracts v from s
+func (s *ShipsInfos) Sub(v ShipsInfos) {
+	for _, ship := range Ships {
+		shipID := ship.GetID()
+		s.Set(shipID, utils.MaxInt(s.ByID(shipID)-v.ByID(shipID), 0))
 	}
 }
 
 // AddShips adds some ships
 func (s *ShipsInfos) AddShips(shipID ID, nb int64) {
-	s.Set(shipID, s.ByID(shipID)+nb)
+	s.Set(shipID, utils.MaxInt(s.ByID(shipID)+nb, 0))
 }
 
 // SubShips subtracts some ships
