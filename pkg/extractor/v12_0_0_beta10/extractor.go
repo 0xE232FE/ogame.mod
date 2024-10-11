@@ -40,3 +40,12 @@ func (e *Extractor) ExtractServerTime(pageHTML []byte) (time.Time, error) {
 func (e *Extractor) ExtractServerTimeFromDoc(doc *goquery.Document) (time.Time, error) {
 	return extractServerTimeFromDoc(doc)
 }
+
+func (e *Extractor) ExtractTechinfo(pageHTML []byte) error {
+	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	return e.ExtractTechinfoFromDoc(doc)
+}
+
+func (e *Extractor) ExtractTechinfoFromDoc(doc *goquery.Document) error {
+	return extractTechinfoFromDoc(doc)
+}
