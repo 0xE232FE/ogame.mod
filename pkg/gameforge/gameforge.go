@@ -737,6 +737,31 @@ func GetUserAccounts(client httpclient.IHttpClient, ctx context.Context, lobby, 
 	if err := json.Unmarshal(by, &userAccounts); err != nil {
 		return userAccounts, errors.New("failed to get user accounts : " + err.Error() + " : " + string(by))
 	}
+
+	// Sitting
+	var sittingAccounts []Account
+	req, err = http.NewRequest(http.MethodGet, getGameforgeLobbyBaseURL(lobby)+"/api/users/me/sitting", nil)
+	if err != nil {
+		return userAccounts, err
+	}
+	req.Header.Set(authorizationHeaderKey, buildBearerHeaderValue(bearerToken))
+	req.Header.Set(acceptEncodingHeaderKey, gzipEncoding)
+	req.WithContext(ctx)
+	resp, err = client.Do(req)
+	if err != nil {
+		return userAccounts, err
+	}
+	defer resp.Body.Close()
+	by, err = utils.ReadBody(resp)
+	if err != nil {
+		return userAccounts, err
+	}
+	if err := json.Unmarshal(by, &sittingAccounts); err != nil {
+		return userAccounts, errors.New("failed to get user accounts : " + err.Error() + " : " + string(by))
+	}
+
+	userAccounts = append(userAccounts, sittingAccounts...)
+
 	return userAccounts, nil
 }
 

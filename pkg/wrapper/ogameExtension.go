@@ -1281,7 +1281,7 @@ func (b *OGame) BuyItem(ref string, celestialID ogame.CelestialID) error {
 }
 
 func (b *OGame) buyItem(ref string, celestialID ogame.CelestialID) error {
-	params := url.Values{"page": {"shop"}, "ajax": {"1"}, "type": {ref}}
+	params := url.Values{"page": {"ingame"}, "component": {"shop"}}
 	if celestialID != 0 {
 		params.Set("cp", strconv.FormatInt(int64(celestialID), 10))
 	}
@@ -1890,4 +1890,19 @@ func (b *OGame) FlightTime2(origin, destination ogame.Coordinate, speed ogame.Sp
 
 func (b *OGame) GetLobby() string {
 	return b.lobby
+}
+
+func (b *OGame) DisableChat() {
+	select {
+	case <-b.closeChatCh:
+	default:
+		close(b.closeChatCh)
+		if b.ws != nil {
+			_ = b.ws.Close()
+		}
+	}
+}
+
+func (b *OGame) GetCachedToken() string {
+	return b.token
 }
