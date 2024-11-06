@@ -25,16 +25,15 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/alaingilbert/ogame/pkg/wrapper/solvers"
-
 	"github.com/alaingilbert/ogame/pkg/device"
+	"github.com/alaingilbert/ogame/pkg/extractor/v12_0_0"
 	"github.com/alaingilbert/ogame/pkg/gameforge"
+	"github.com/alaingilbert/ogame/pkg/wrapper/solvers"
 	err2 "github.com/pkg/errors"
 
 	"github.com/alaingilbert/ogame/pkg/exponentialBackoff"
 	"github.com/alaingilbert/ogame/pkg/extractor"
 	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
-	v874 "github.com/alaingilbert/ogame/pkg/extractor/v874"
 	"github.com/alaingilbert/ogame/pkg/httpclient"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/parser"
@@ -211,7 +210,7 @@ func NewNoLogin(username, password, otpSecret, bearerToken, universe, lang strin
 	b.language = lang
 	b.playerID = playerID
 
-	ext := v874.NewExtractor()
+	ext := v12_0_0.NewExtractor()
 	ext.SetLanguage(lang)
 	ext.SetLocation(time.UTC)
 	b.extractor = ext
@@ -3726,7 +3725,6 @@ func (b *OGame) getExpeditionMessageAt(t time.Time) (ogame.ExpeditionMessage, er
 			break
 		}
 	}
-
 	return ogame.ExpeditionMessage{}, errors.New("expedition message not found for " + t.String())
 }
 
@@ -3823,8 +3821,8 @@ func (b *OGame) deleteMessage(msgID int64) error {
 		"action":    {"flagDeleted"},
 	}
 	payload := url.Values{
-		"token":     {token},
-		"messageId": {utils.FI64(msgID)},
+		"token":        {token},
+		"messageIds[]": {utils.FI64(msgID)},
 	}
 	by, err := b.postPageContent(vals, payload)
 	if err != nil {
