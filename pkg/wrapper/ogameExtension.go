@@ -1308,15 +1308,12 @@ func (b *OGame) buyItem(ref string, celestialID ogame.CelestialID) error {
 		}
 	}
 
-	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
-	scriptTxt := doc.Find("script").Text()
-	r := regexp.MustCompile(`var token="([^"]+)"`)
-	m := r.FindStringSubmatch(scriptTxt)
-	if len(m) != 2 {
+	token, err := b.extractor.ExtractToken(pageHTML)
+	if err != nil || token == "" {
 		err := errors.New("failed to find buy token")
 		return err
 	}
-	token := m[1]
+
 	params = url.Values{"page": {"componentOnly"}, "component": {"itemactions"}, "action": {"buy"}, "itemUuid": {ref}, "asJson": {"1"}}
 	payload := url.Values{
 		"token": {token},

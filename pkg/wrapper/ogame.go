@@ -8,11 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/alaingilbert/ogame/pkg/device"
-	"github.com/alaingilbert/ogame/pkg/extractor/v12_0_0"
-	"github.com/alaingilbert/ogame/pkg/gameforge"
-	"github.com/alaingilbert/ogame/pkg/wrapper/solvers"
-	err2 "github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"log"
@@ -29,6 +24,12 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/alaingilbert/ogame/pkg/device"
+	"github.com/alaingilbert/ogame/pkg/extractor/v12_0_0"
+	"github.com/alaingilbert/ogame/pkg/gameforge"
+	"github.com/alaingilbert/ogame/pkg/wrapper/solvers"
+	err2 "github.com/pkg/errors"
 
 	"github.com/alaingilbert/ogame/pkg/exponentialBackoff"
 	"github.com/alaingilbert/ogame/pkg/extractor"
@@ -855,6 +856,8 @@ func IsAjaxPage(vals url.Values) bool {
 			HighscoreContentAjaxPageName,
 			LfResearchLayerPageName,
 			LfResearchResetLayerPageName,
+			CharacterclassselectionPageName,
+			ItemactionsPageName,
 		})
 }
 
