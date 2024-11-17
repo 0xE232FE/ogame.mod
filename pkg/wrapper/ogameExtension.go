@@ -1893,9 +1893,11 @@ func (b *OGame) DisableChat() {
 	select {
 	case <-b.closeChatCh:
 	default:
-		close(b.closeChatCh)
-		if b.ws != nil {
-			_ = b.ws.Close()
+		if b.closeChatCh != nil {
+			close(b.closeChatCh)
+			if b.ws != nil {
+				_ = b.ws.Close()
+			}
 		}
 	}
 }
