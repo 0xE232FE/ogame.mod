@@ -3392,6 +3392,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 	}
 
 	payload := b.extractor.ExtractHiddenFieldsFromDoc(fleet1Doc)
+	payload.Del("expeditionFleetTemplateId")
 	ships.EachFlyable(func(shipID ogame.ID, nb int64) {
 		payload.Set("am"+utils.FI64(shipID), utils.FI64(nb))
 	})
