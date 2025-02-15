@@ -1893,13 +1893,19 @@ func (b *OGame) DisableChat() {
 	select {
 	case <-b.closeChatCh:
 	default:
-		if b.closeChatCh != nil {
-			close(b.closeChatCh)
-			if b.ws != nil {
-				_ = b.ws.Close()
+		if b.chatConnectedAtom.CompareAndSwap(true, false) {
+			if b.closeChatCh != nil {
+				close(b.closeChatCh)
+				if b.ws != nil {
+					_ = b.ws.Close()
+				}
 			}
 		}
 	}
+}
+
+func (b *OGame) IsChatConnected() bool {
+	return b.chatConnectedAtom.Load()
 }
 
 func (b *OGame) GetCachedToken() string {
