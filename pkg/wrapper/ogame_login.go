@@ -63,6 +63,9 @@ func (b *OGame) loginWithBearerToken(token string) (bool, error) {
 	if errors.Is(err, context.Canceled) ||
 		errors.Is(err, ogame.ErrAccountBlocked) {
 		return false, err
+	} else if errors.Is(err, context.Canceled) ||
+		errors.Is(err, ogame.ErrAccountNotFound) {
+		return false, err
 	} else if err != nil {
 		err := botLoginFn()
 		return false, err
