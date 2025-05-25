@@ -191,12 +191,21 @@ var (
 
 type ObjsStruct struct{ m map[ID]BaseOgameObj }
 
+// ByID ...
 func (o ObjsStruct) ByID(id ID) BaseOgameObj {
 	return o.m[id]
 }
 
 func (o ObjsStruct) GetAllObjs() map[ID]BaseOgameObj {
 	return o.m
+}
+
+// GetShip ...
+func (o ObjsStruct) GetShip(id ID) Ship {
+	if ship, ok := o.m[id].(Ship); ok {
+		return ship
+	}
+	return nil
 }
 
 var Objs = ObjsStruct{m: make(map[ID]BaseOgameObj)}

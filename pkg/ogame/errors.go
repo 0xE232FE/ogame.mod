@@ -8,24 +8,6 @@ var ErrNotLogged = errors.New("not logged")
 // ErrMobileView returned when the bot is in mobile view
 var ErrMobileView = errors.New("mobile view not supported")
 
-// ErrBadCredentials returned when the provided credentials are invalid
-var ErrBadCredentials = errors.New("bad credentials")
-
-// ErrOTPRequired returned when the otp is required
-var ErrOTPRequired = errors.New("otp required")
-
-// ErrOTPInvalid returned when the otp is invalid
-var ErrOTPInvalid = errors.New("otp invalid")
-
-// ErrAccountNotFound returned when the account is not found
-var ErrAccountNotFound = errors.New("account not found")
-
-// ErrAccountBlocked returned when account is banned
-var ErrAccountBlocked = errors.New("account is blocked")
-
-// ErrLoginLink returned when account is somewhat banned, cannot login for no apparent reason
-var ErrLoginLink = errors.New("failed to get login link")
-
 // ErrInvalidPlanetID returned when a planet id is invalid
 var ErrInvalidPlanetID = errors.New("invalid planet id")
 
@@ -38,14 +20,14 @@ var ErrBotInactive = errors.New("bot is not active")
 // ErrBotLoggedOut returned when the bot is logged out (manually logged out)
 var ErrBotLoggedOut = errors.New("bot is logged out")
 
-// ErrFailedExecuteCallback returned when "withRetry" failed to execute callback
-var ErrFailedExecuteCallback = errors.New("failed to execute callback")
-
 // ErrDeactivateHidePictures returned when "Hide pictures in reports" is activated
 var ErrDeactivateHidePictures = errors.New("deactivate 'Hide pictures in reports'")
 
 // ErrEventsBoxNotDisplayed returned when trying to get attacks from a full page without event box
 var ErrEventsBoxNotDisplayed = errors.New("eventList box is not displayed")
+
+// ErrNotEnoughDeuterium ...
+var ErrNotEnoughDeuterium = errors.New("not enough deuterium")
 
 // Send fleet errors
 var (

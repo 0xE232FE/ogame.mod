@@ -18,9 +18,12 @@ func NewExtractor() *Extractor {
 }
 
 // ExtractIsInVacation ...
-func (e *Extractor) ExtractIsInVacation(pageHTML []byte) bool {
-	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
-	return e.ExtractIsInVacationFromDoc(doc)
+func (e *Extractor) ExtractIsInVacation(pageHTML []byte) (bool, error) {
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	if err != nil {
+		return false, err
+	}
+	return e.ExtractIsInVacationFromDoc(doc), nil
 }
 
 // ExtractIsInVacationFromDoc ...
@@ -30,7 +33,10 @@ func (e *Extractor) ExtractIsInVacationFromDoc(doc *goquery.Document) bool {
 
 // ExtractEspionageReport ...
 func (e *Extractor) ExtractEspionageReport(pageHTML []byte) (ogame.EspionageReport, error) {
-	doc, _ := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	if err != nil {
+		return ogame.EspionageReport{}, err
+	}
 	return e.ExtractEspionageReportFromDoc(doc)
 }
 

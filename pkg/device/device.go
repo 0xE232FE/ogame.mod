@@ -79,6 +79,10 @@ type Device struct {
 	persistor Persistor
 }
 
+func (d *Device) Do(req *http.Request) (*http.Response, error) {
+	return d.client.Do(req)
+}
+
 func (d *Device) GetClient() *httpclient.Client {
 	return d.client
 }

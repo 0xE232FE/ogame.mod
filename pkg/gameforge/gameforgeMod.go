@@ -1,14 +1,17 @@
 package gameforge
 
+/*
+package gameforge
+
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 
 	"github.com/alaingilbert/ogame/pkg/device"
-	"github.com/alaingilbert/ogame/pkg/utils"
 )
 
 func AddAccountNew(dev *device.Device, ctx context.Context, lobby, accountGroup, sessionToken string) (*AddAccountRes, error) {
@@ -39,14 +42,14 @@ func AddAccountNew(dev *device.Device, ctx context.Context, lobby, accountGroup,
 		return nil, err
 	}
 	defer resp.Body.Close()
-	by, err := utils.ReadBody(resp)
+	by, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode == http.StatusBadRequest {
 		return nil, errors.New("invalid request, account already in lobby ?")
 	}
-	var newAccount AddAccountRes
+	var newAccount AddAccountResponse
 	if err := json.Unmarshal(by, &newAccount); err != nil {
 		return nil, errors.New(err.Error() + " : " + string(by))
 	}
@@ -56,3 +59,4 @@ func AddAccountNew(dev *device.Device, ctx context.Context, lobby, accountGroup,
 	newAccount.BearerToken = sessionToken
 	return &newAccount, nil
 }
+*/

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -27,11 +28,11 @@ import (
 )
 
 func (b *OGame) GetUserAccounts() ([]gameforge.Account, error) {
-	return gameforge.GetUserAccounts(b.device.GetClient(), b.ctx, b.lobby, b.GetBearerToken())
+	return gameforge.GetUserAccounts(b.ctx, b.device.GetClient(), gameforge.OGAME, b.lobby, b.GetBearerToken())
 }
 
 func (b *OGame) GetServers() ([]gameforge.Server, error) {
-	return gameforge.GetServers(b.lobby, b.device.GetClient(), b.ctx)
+	return gameforge.GetServers(b.ctx, b.device.GetClient(), gameforge.OGAME, b.lobby)
 }
 
 func (b *OGame) GetPassword() string {
@@ -39,7 +40,7 @@ func (b *OGame) GetPassword() string {
 }
 
 func (b *OGame) FindAccount(universe, lang string, playerID int64, accounts []gameforge.Account, servers []gameforge.Server) (gameforge.Account, gameforge.Server, error) {
-	return findAccount(universe, lang, playerID, accounts, servers)
+	return gameforge.FindAccount(universe, lang, playerID, accounts, servers)
 }
 
 func (b *OGame) GetBearerToken() string {
@@ -222,7 +223,8 @@ func (b *OGame) ninjaSendFleet(celestialID ogame.CelestialID, ships []ogame.Quan
 		return ogame.Fleet{}, err
 	}
 	multiplier := float64(b.GetServerData().CargoHyperspaceTechMultiplier) / 100.0
-	cargo := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1)
+
+	cargo := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), lfbonus, b.CharacterClass(), multiplier, b.server.OGameSettings().EspionageProbeRaids == 1)
 	newResources := ogame.Resources{}
 	if resources.Total() > cargo {
 		newResources.Deuterium = int64(math.Min(float64(resources.Deuterium), float64(cargo)))
@@ -239,9 +241,6 @@ func (b *OGame) ninjaSendFleet(celestialID ogame.CelestialID, ships []ogame.Quan
 	newResources.Deuterium = utils.MaxInt(newResources.Deuterium, 0)
 
 	// Page 3 : select coord, mission, speed
-	if b.IsV8() {
-		payload.Set("token", ninjaFleetToken)
-	}
 	payload.Set("speed", strconv.FormatInt(int64(speed), 10))
 	payload.Set("crystal", strconv.FormatInt(newResources.Crystal, 10))
 	payload.Set("deuterium", strconv.FormatInt(newResources.Deuterium, 10))
@@ -350,10 +349,11 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 
 	b.debug("Get Token: " + strconv.FormatInt(time.Now().Sub(BeginTime).Milliseconds(), 10) + " ms")
 
-	_, _, availableShips, _, _, _, _, err := b.getTechs(celestialID)
+	resTechs, err := b.getTechs(celestialID)
 	if err != nil {
 		return ogame.Fleet{}, err
 	}
+	availableShips := resTechs.ShipsInfos
 	b.debug("Get Techs: " + strconv.FormatInt(time.Now().Sub(BeginTime).Milliseconds(), 10) + " ms")
 
 	// /game/index.php?page=json&component=eventList&ajax=1
@@ -496,7 +496,8 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 
 	lfbonus, err := b.getCachedLfBonuses()
 	multiplier := float64(b.GetServerData().CargoHyperspaceTechMultiplier) / 100.0
-	fuelCapacity := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1)
+
+	fuelCapacity := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), lfbonus, b.CharacterClass(), multiplier, b.server.OGameSettings().EspionageProbeRaids == 1)
 
 	//orogin, _ := b.getCachedCelestial(celestialID)
 	_, fuel := b.CalcFlightTime2(origin.GetCoordinate(), where, float64(speed)/10, ogame.ShipsInfos{}.FromQuantifiables(ships), mission, holdingTime)
@@ -598,7 +599,7 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 
 	lfbonus, err = b.getCachedLfBonuses()
 	multiplier = float64(b.GetServerData().CargoHyperspaceTechMultiplier) / 100.0
-	cargo := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1)
+	cargo := ogame.ShipsInfos{}.FromQuantifiables(ships).Cargo(b.getCachedResearch(), lfbonus, b.CharacterClass(), multiplier, b.server.OGameSettings().EspionageProbeRaids == 1)
 	newResources := ogame.Resources{}
 	if resources.Total() > cargo {
 		newResources.Deuterium = int64(math.Min(float64(resources.Deuterium), float64(cargo)))
@@ -615,9 +616,6 @@ func (b *OGame) ninjaSendFleetWithChecks(celestialID ogame.CelestialID, ships []
 	newResources.Deuterium = utils.MaxInt(newResources.Deuterium, 0)
 
 	// Page 3 : select coord, mission, speed
-	if b.IsV8() {
-		payload.Set("token", checkRes.NewAjaxToken)
-	}
 	payload.Set("speed", strconv.FormatInt(int64(speed), 10))
 	payload.Set("crystal", strconv.FormatInt(newResources.Crystal, 10))
 	payload.Set("deuterium", strconv.FormatInt(newResources.Deuterium, 10))
@@ -852,23 +850,23 @@ func NinjaSendFleetHandler(c echo.Context) error {
 }
 
 func (b *OGame) HasEngineer() bool {
-	return b.hasEngineer
+	return b.HasEngineer()
 }
 
 func (b *OGame) HasCommander() bool {
-	return b.hasCommander
+	return b.HasCommander()
 }
 
 func (b *OGame) HasAdmiral() bool {
-	return b.hasAdmiral
+	return b.HasAdmiral()
 }
 
 func (b *OGame) HasGeologist() bool {
-	return b.hasGeologist
+	return b.HasGeologist()
 }
 
 func (b *OGame) HasTechnocrat() bool {
-	return b.hasTechnocrat
+	return b.HasTechnocrat()
 }
 
 // never obfuscate this type
@@ -901,7 +899,7 @@ func GetUserAccountsWithBearerToken(client *http.Client, lobby, token string) ([
 			log.Print(err)
 		}
 	}()
-	by, err := utils.ReadBody(resp)
+	by, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return userAccounts, err
 	}
@@ -956,7 +954,7 @@ func CreateGiftCodeWithBearerToken(lobby, bearerToken string, client *http.Clien
 		}
 	}
 
-	by, err := utils.ReadBody(resp)
+	by, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ""
 	}
@@ -986,7 +984,16 @@ func (b *OGame) CreateGiftCode() string {
 		Accounts []GiftCodePayload `json:"accounts"`
 	}
 
-	accounts, _ := b.GetUserAccounts()
+	var gfcfg *gameforge.Config = &gameforge.Config{
+		Ctx:         b.ctx,
+		Device:      b.device,
+		Platform:    gameforge.OGAME,
+		Lobby:       b.lobby,
+		BearerToken: b.bearerToken,
+	}
+	gf, _ := gameforge.New(gfcfg)
+
+	accounts, _ := gf.GetUserAccounts()
 	for _, account := range accounts {
 		payload.Accounts = append(payload.Accounts, GiftCodePayload{
 			GameAccountID: account.ID,
@@ -1023,7 +1030,7 @@ func (b *OGame) CreateGiftCode() string {
 		}
 	}
 
-	by, err := utils.ReadBody(resp)
+	by, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ""
 	}
@@ -1141,11 +1148,11 @@ func (b *OGame) CalcCargo(total int64) (sc, lc, rc, pf, ds int64) {
 	lfbonus, _ := b.getCachedLfBonuses()
 	multiplier := float64(b.GetServerData().CargoHyperspaceTechMultiplier) / 100.0
 
-	lc = int64(math.Ceil(float64(total) / float64(ogame.LargeCargo.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1))))
-	sc = int64(math.Ceil(float64(total) / float64(ogame.SmallCargo.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1))))
-	rc = int64(math.Ceil(float64(total) / float64(ogame.Recycler.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1))))
-	pf = int64(math.Ceil(float64(total) / float64(ogame.Pathfinder.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1))))
-	ds = int64(math.Ceil(float64(total) / float64(ogame.Deathstar.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.characterClass, multiplier, b.server.Settings.EspionageProbeRaids == 1))))
+	lc = int64(math.Ceil(float64(total) / float64(ogame.LargeCargo.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.CharacterClass(), multiplier, b.server.OGameSettings().EspionageProbeRaids == 1))))
+	sc = int64(math.Ceil(float64(total) / float64(ogame.SmallCargo.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.CharacterClass(), multiplier, b.server.OGameSettings().EspionageProbeRaids == 1))))
+	rc = int64(math.Ceil(float64(total) / float64(ogame.Recycler.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.CharacterClass(), multiplier, b.server.OGameSettings().EspionageProbeRaids == 1))))
+	pf = int64(math.Ceil(float64(total) / float64(ogame.Pathfinder.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.CharacterClass(), multiplier, b.server.OGameSettings().EspionageProbeRaids == 1))))
+	ds = int64(math.Ceil(float64(total) / float64(ogame.Deathstar.GetCargoCapacity(b.getCachedResearch(), lfbonus, b.CharacterClass(), multiplier, b.server.OGameSettings().EspionageProbeRaids == 1))))
 	return
 }
 
@@ -1176,7 +1183,7 @@ func RedeemCodeWithBearerToken(lobby, bearerToken, token string, client *http.Cl
 		TokenType string `json:"tokenType"`
 	}
 	var respParsed respStruct
-	by, err := utils.ReadBody(resp)
+	by, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -1209,7 +1216,7 @@ func (b *OGame) njaCancelFleet(fleetID ogame.FleetID) error {
 	if pageHTML, err = b.getPageContent(url.Values{"page": {"ajax"}, "component": {"movement"}, "return": {fleetID.String()}, "token": {token}, "ajax": {"1"}}); err != nil {
 		return err
 	}
-	fleets := b.extractor.ExtractFleets(pageHTML)
+	fleets, _ := b.extractor.ExtractFleets(pageHTML)
 	token, err = b.extractor.ExtractCancelFleetToken(pageHTML, fleetID)
 	if err == nil {
 		cancelFleetToken = token
@@ -1407,7 +1414,8 @@ func CalcFlightTime2(origin, destination ogame.Coordinate, universeSize, nbSyste
 	if !ships.HasFlyableShips() {
 		return
 	}
-	v := findSlowestSpeed(ships, techs, lfBonuses, characterClass, allianceClass)
+
+	_, v := ships.SlowestShip(techs, lfBonuses, characterClass, allianceClass)
 	d := float64(Distance(origin, destination, universeSize, nbSystems, systemsSkip, donutGalaxy, donutSystem))
 
 	secs = CalcFlightTimeWithBaseSpeed(origin, destination, universeSize, nbSystems, donutGalaxy, donutSystem, speed, v, universeSpeedFleet, systemsSkip)
@@ -1421,8 +1429,9 @@ func CalcFlightTime2(origin, destination ogame.Coordinate, universeSize, nbSyste
 func (b *OGame) CalcFlightTime2(origin, destination ogame.Coordinate, speed float64, ships ogame.ShipsInfos, missionID ogame.MissionID, holdingTime int64) (secs, fuel int64) {
 	lfbonus, _ := b.getCachedLfBonuses()
 	allianceClass, _ := b.getCachedAllianceClass()
-	fleetIgnoreEmptySystems := b.serverData.FleetIgnoreEmptySystems
-	fleetIgnoreInactiveSystems := b.serverData.FleetIgnoreInactiveSystems
+
+	fleetIgnoreEmptySystems := b.getServerData().FleetIgnoreEmptySystems
+	fleetIgnoreInactiveSystems := b.getServerData().FleetIgnoreInactiveSystems
 	var systemsSkip int64
 	if fleetIgnoreEmptySystems || fleetIgnoreInactiveSystems {
 		opts := make([]Option, 0)
@@ -1437,9 +1446,10 @@ func (b *OGame) CalcFlightTime2(origin, destination ogame.Coordinate, speed floa
 			systemsSkip += res.InactiveSystems
 		}
 	}
-	return CalcFlightTime2(origin, destination, b.serverData.Galaxies, b.serverData.Systems, b.serverData.DonutGalaxy,
-		b.serverData.DonutSystem, b.serverData.GlobalDeuteriumSaveFactor, speed, GetFleetSpeedForMission(b.serverData, missionID), ships,
-		b.GetCachedResearch(), lfbonus, b.characterClass, allianceClass, holdingTime, systemsSkip)
+
+	return CalcFlightTime2(origin, destination, b.getServerData().Galaxies, b.getServerData().Systems, b.getServerData().DonutGalaxy,
+		b.getServerData().DonutSystem, b.getServerData().GlobalDeuteriumSaveFactor, speed, GetFleetSpeedForMission(b.getServerData(), missionID), ships,
+		b.GetCachedResearch(), lfbonus, b.CharacterClass(), allianceClass, holdingTime, systemsSkip)
 }
 
 func calcFuel2(ships ogame.ShipsInfos, dist, duration int64, universeSpeedFleet, fleetDeutSaveFactor float64, techs ogame.Researches, lfBonuses ogame.LfBonuses, characterClass ogame.CharacterClass, allianceClass ogame.AllianceClass, holdingTime int64) (fuel int64) {
@@ -1890,24 +1900,9 @@ func (b *OGame) GetLobby() string {
 }
 
 func (b *OGame) DisableChat() {
-	select {
-	case <-b.closeChatCh:
-	default:
-		if b.chatConnectedAtom.CompareAndSwap(true, false) {
-			if b.closeChatCh != nil {
-				close(b.closeChatCh)
-				if b.ws != nil {
-					_ = b.ws.Close()
-				}
-			}
-		}
-	}
+	b.softLogout()
 }
 
 func (b *OGame) IsChatConnected() bool {
 	return b.chatConnectedAtom.Load()
-}
-
-func (b *OGame) GetCachedToken() string {
-	return b.token
 }

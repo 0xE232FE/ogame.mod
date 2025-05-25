@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/alaingilbert/clockwork"
 	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/utils"
@@ -19,7 +18,7 @@ import (
 func extractProductionFromDoc(doc *goquery.Document) ([]ogame.Quantifiable, error) {
 	res := make([]ogame.Quantifiable, 0)
 	active := doc.Find("div.productionBoxShips  table.construction")
-	href, _ := active.Find("td a").Attr("href")
+	href := active.Find("td a").AttrOr("href", "")
 	m := regexp.MustCompile(`openTech=(\d+)`).FindStringSubmatch(href)
 	if len(m) == 0 {
 		return []ogame.Quantifiable{}, nil
@@ -28,7 +27,7 @@ func extractProductionFromDoc(doc *goquery.Document) ([]ogame.Quantifiable, erro
 	activeID := ogame.ID(idInt)
 	activeNbr := utils.DoParseI64(active.Find("div.shipSumCount").Text())
 	res = append(res, ogame.Quantifiable{ID: activeID, Nbr: activeNbr})
-	doc.Find("div.productionBoxShips  table.queue td").Each(func(i int, s *goquery.Selection) {
+	for _, s := range doc.Find("table.queue td").EachIter() {
 		link := s.Find("img")
 		alt := link.AttrOr("alt", "")
 		var itemID ogame.ID
@@ -41,7 +40,7 @@ func extractProductionFromDoc(doc *goquery.Document) ([]ogame.Quantifiable, erro
 			itemNbr := utils.ParseInt(s.Text())
 			res = append(res, ogame.Quantifiable{ID: ogame.ID(itemID), Nbr: itemNbr})
 		}
-	})
+	}
 	return res, nil
 }
 
@@ -57,7 +56,7 @@ func extractOverviewShipSumCountdownFromBytes(pageHTML []byte) int64 {
 func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatReportSummary, int64, error) {
 	msgs := make([]ogame.CombatReportSummary, 0)
 	nbPage := utils.DoParseI64(doc.Find("ul.pagination li").Last().AttrOr("data-page", "1"))
-	doc.Find("li.msg").Each(func(i int, s *goquery.Selection) {
+	for _, s := range doc.Find("li.msg").EachIter() {
 		if idStr, exists := s.Attr("data-msg-id"); exists {
 			if id, err := utils.ParseI64(idStr); err == nil {
 				report := ogame.CombatReportSummary{ID: id}
@@ -94,7 +93,7 @@ func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatRe
 				link := s.Find("message-footer.msg_actions button.msgAttackBtn").AttrOr("onclick", "")
 				m = regexp.MustCompile(`page=ingame&component=fleetdispatch&galaxy=(\d+)&system=(\d+)&position=(\d+)&type=(\d+)&`).FindStringSubmatch(link)
 				if len(m) != 5 {
-					return
+					continue
 				}
 				galaxy := utils.DoParseI64(m[1])
 				system := utils.DoParseI64(m[2])
@@ -108,7 +107,7 @@ func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatRe
 				msgs = append(msgs, report)
 			}
 		}
-	})
+	}
 	return msgs, nbPage, nil
 }
 
@@ -191,38 +190,6 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 	// bid = max(auction.DeficitBid, auction.MinimumBid - auction.AlreadyBid)
 
 	return auction, nil
-}
-
-func extractConstructions(pageHTML []byte, clock clockwork.Clock) (buildingID ogame.ID, buildingCountdown int64,
-	// OGame Version as of 11.13.0
-	researchID ogame.ID, researchCountdown int64,
-	lfBuildingID ogame.ID, lfBuildingCountdown int64,
-	lfResearchID ogame.ID, lfResearchCountdown int64) {
-	buildingCountdownMatch := regexp.MustCompile(`new CountdownTimer\('buildingCountdown', (\d+),`).FindSubmatch(pageHTML)
-	if len(buildingCountdownMatch) > 0 {
-		buildingCountdown = int64(utils.ToInt(buildingCountdownMatch[1]))
-		buildingIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancelbuilding\((\d+),`).FindSubmatch(pageHTML)[1])
-		buildingID = ogame.ID(buildingIDInt)
-	}
-	researchCountdownMatch := regexp.MustCompile(`new CountdownTimer\('researchCountdown', (\d+),`).FindSubmatch(pageHTML)
-	if len(researchCountdownMatch) > 0 {
-		researchCountdown = int64(utils.ToInt(researchCountdownMatch[1]))
-		researchIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancelresearch\((\d+),`).FindSubmatch(pageHTML)[1])
-		researchID = ogame.ID(researchIDInt)
-	}
-	lfBuildingCountdownMatch := regexp.MustCompile(`new CountdownTimer\('lfbuildingCountdown', (\d+),`).FindSubmatch(pageHTML)
-	if len(lfBuildingCountdownMatch) > 0 {
-		lfBuildingCountdown = int64(utils.ToInt(lfBuildingCountdownMatch[1]))
-		lfBuildingIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancellfbuilding\((\d+),`).FindSubmatch(pageHTML)[1])
-		lfBuildingID = ogame.ID(lfBuildingIDInt)
-	}
-	lfResearchCountdownMatch := regexp.MustCompile(`new CountdownTimer\('lfresearchCountdown', (\d+),`).FindSubmatch(pageHTML)
-	if len(lfResearchCountdownMatch) > 0 {
-		lfResearchCountdown = int64(utils.ToInt(lfResearchCountdownMatch[1]))
-		lfResearchIDInt := utils.ToInt(regexp.MustCompile(`onclick="cancellfresearch\((\d+),`).FindSubmatch(pageHTML)[1])
-		lfResearchID = ogame.ID(lfResearchIDInt)
-	}
-	return
 }
 
 // func extractConstructions(pageHTML []byte, clock clockwork.Clock) (buildingID ogame.ID, buildingCountdown int64,
