@@ -17,7 +17,6 @@ require (
 	github.com/go-errors/errors v1.0.1
 	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
-	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4
 	github.com/google/uuid v1.5.0
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/go-version v1.2.0
@@ -45,6 +44,7 @@ require (
 	gopkg.in/abiosoft/ishell.v2 v2.0.0
 	gopkg.in/tucnak/telebot.v2 v2.5.0
 	gopkg.in/urfave/cli.v2 v2.0.0-20180128182452-d3ae77c26ac8
+	gorm.io/gen v0.3.26
 	gorm.io/gorm v1.25.10
 )
 
@@ -87,7 +87,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/datatypes v1.2.1 // indirect
 	gorm.io/driver/mysql v1.5.7 // indirect
-	gorm.io/gen v0.3.26 // indirect
 	gorm.io/hints v1.1.2 // indirect
 	gorm.io/plugin/dbresolver v1.5.2 // indirect
 	modernc.org/libc v1.22.5 // indirect
