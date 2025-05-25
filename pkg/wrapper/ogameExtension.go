@@ -1900,9 +1900,27 @@ func (b *OGame) GetLobby() string {
 }
 
 func (b *OGame) DisableChat() {
-	b.softLogout()
+	if b.IsChatConnected() {
+		b.info("========================== DISABLE CHAT SOFTLOGOUT =============================")
+		b.chatConnectedAtom.Store(false)
+		b.closeChatCancel()
+
+		if b.ws != nil {
+			b.info("========================== DISABLE CHAT WEBSOCKET =============================")
+			b.ws.Close()
+			if b.closeChatCtx != nil {
+				b.closeChatCancel()
+			}
+		} else {
+			b.chatConnectedAtom.Store(false)
+		}
+	}
 }
 
 func (b *OGame) IsChatConnected() bool {
 	return b.chatConnectedAtom.Load()
+}
+
+func (b *OGame) GetPlayerID() int64 {
+	return b.playerID
 }
