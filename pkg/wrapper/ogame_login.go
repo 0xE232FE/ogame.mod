@@ -93,7 +93,7 @@ beginning:
 		var err error
 		server, userAccount, err = b.loginPart1(token)
 		var accountBlockedErr *gameforge.AccountBlockedError
-		if errors.Is(err, context.Canceled) || errors.As(err, &accountBlockedErr) {
+		if errors.Is(err, context.Canceled) || errors.As(err, &accountBlockedErr) || errors.Is(err, gameforge.ErrAccountNotFound) {
 			return false, false, err
 		} else if err != nil {
 			if didFullLogin {
