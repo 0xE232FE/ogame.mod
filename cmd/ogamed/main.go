@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/alaingilbert/ogame/pkg/device"
-	"github.com/alaingilbert/ogame/pkg/tlsclientconfig"
 	"github.com/alaingilbert/ogame/pkg/gameforge/solvers"
+	"github.com/alaingilbert/ogame/pkg/tlsclientconfig"
 	"github.com/alaingilbert/ogame/pkg/wrapper"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -57,67 +57,67 @@ func main() {
 			Name:    "device-name",
 			Usage:   "Set the Device Name",
 			Value:   "device_name",
-			EnvVars: []string{"OGAMED_DEVICENAME"},
+			Sources: cli.EnvVars("OGAMED_DEVICENAME"),
 		},
 		&cli.StringFlag{
 			Name:    "device-system",
 			Usage:   `Set the Device System (Android, Windows, "MacOSX", Linux, iOS)`,
 			Value:   "windows",
-			EnvVars: []string{"OGAMED_DEVICESYSTEM"},
+			Sources: cli.EnvVars("OGAMED_DEVICESYSTEM"),
 		},
 		&cli.StringFlag{
 			Name:    "device-browser",
 			Usage:   "Set the Device Browser (Chrome, Opera, Safari, Edge, Firefox)",
 			Value:   "Chrome",
-			EnvVars: []string{"OGAMED_DEVICEBROWSER"},
+			Sources: cli.EnvVars("OGAMED_DEVICEBROWSER"),
 		},
 		&cli.IntFlag{
 			Name:    "device-memory",
 			Usage:   "Set the Device Memory",
 			Value:   8,
-			EnvVars: []string{"OGAMED_DEVICEMEMORY"},
+			Sources: cli.EnvVars("OGAMED_DEVICEMEMORY"),
 		},
 		&cli.IntFlag{
 			Name:    "device-concurrency",
 			Usage:   "Set the Device Concurrency",
 			Value:   16,
-			EnvVars: []string{"OGAMED_DEVICECONCURRENCY"},
+			Sources: cli.EnvVars("OGAMED_DEVICECONCURRENCY"),
 		},
 		&cli.IntFlag{
 			Name:    "device-color",
 			Usage:   "Set the Device Color depth",
 			Value:   24,
-			EnvVars: []string{"OGAMED_DEVICECOLOR"},
+			Sources: cli.EnvVars("OGAMED_DEVICECOLOR"),
 		},
 		&cli.IntFlag{
 			Name:    "device-width",
 			Usage:   "Set the Device Width",
 			Value:   1900,
-			EnvVars: []string{"OGAMED_DEVICEWIDTH"},
+			Sources: cli.EnvVars("OGAMED_DEVICEWIDTH"),
 		},
 		&cli.IntFlag{
 			Name:    "device-height",
 			Usage:   "Set the Device Height",
 			Value:   900,
-			EnvVars: []string{"OGAMED_DEVICHEIGHT"},
+			Sources: cli.EnvVars("OGAMED_DEVICHEIGHT"),
 		},
 		&cli.StringFlag{
 			Name:    "device-timezone",
 			Usage:   "Set the Device Timezone",
 			Value:   "America/Los_Angeles",
-			EnvVars: []string{"OGAMED_DEVICETIMEZONE"},
+			Sources: cli.EnvVars("OGAMED_DEVICETIMEZONE"),
 		},
 		&cli.StringFlag{
 			Name:    "device-lang",
 			Usage:   "Set the Device Language",
 			Value:   "en-US,en",
-			EnvVars: []string{"OGAMED_DEVICELANG"},
+			Sources: cli.EnvVars("OGAMED_DEVICELANG"),
 		},
 		&cli.StringFlag{
 			Name:    "device-user-agent",
 			Usage:   "Set the Device User-Agent",
 			Value:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-			EnvVars: []string{"OGAMED_DEVICEUSERAGENT"},
+			Sources: cli.EnvVars("OGAMED_DEVICEUSERAGENT"),
 		},
 		&cli.StringFlag{
 			Name:    "host",
@@ -227,11 +227,11 @@ func main() {
 			Sources: cli.EnvVars("OGAMED_DEVICENAME"),
 		},
 		// cookies-filename DEPRECATED Only for compatibility TBot this parameter have to be removed soon!
-		&cli.StringFlag{
-			Name:    "cookies-filename",
-			Usage:   "[DEPRECATED] Path to Cookie File",
-			EnvVars: []string{"OGAMED_COOKIEFILENAME"},
-		},
+		// &cli.StringFlag{
+		// 	Name:    "cookies-filename",
+		// 	Usage:   "[DEPRECATED] Path to Cookie File",
+		// 	EnvVars: []string{"OGAMED_COOKIEFILENAME"},
+		// },
 	}
 	app.Action = start
 	if err := app.Run(context.Background(), os.Args); err != nil {
