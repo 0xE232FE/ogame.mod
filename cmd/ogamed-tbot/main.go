@@ -333,6 +333,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	if njaApiKey != "" {
 		params.CaptchaSolver = solvers.NinjaSolver(njaApiKey)
 	}
+	params.CaptchaSolver = captchaSolverCallback()
 
 	bot, err := wrapper.NewWithParams(params)
 	if err != nil {
@@ -463,9 +464,10 @@ func start(ctx context.Context, c *cli.Command) error {
 
 	// TBot Handlers
 	e.GET("/bot/alliance-class", GetAllianceClassHandler)
-	e.GET("/bot/planets/:planetID/lifeform-bonuses", GetLfBonusesHandler)
+	e.GET("/bot/planets/:planetID/lifeform-bonuses", GetLfBonusesTbotHandler)
 	e.GET("/bot/expedition-messages", GetExpeditionMessagesHandler)
 	e.POST("/bot/toggle-manual-mode", PostToggleManualModeHandler)
+	e.GET("/bot/lfbonuses", GetLfBonusesHandler)
 
 	// Get/Post Page Content
 	e.GET("/game/index.php", GetFromGameHandler)

@@ -277,7 +277,7 @@ func ingameUi(pageHTML []byte, state string, locked bool) []byte {
 }
 
 // GetLfBonusesHandler ...
-func GetLfBonusesHandler(c echo.Context) error {
+func GetLfBonusesTbotHandler(c echo.Context) error {
 	bot := c.Get("bot").(*wrapper.OGame)
 	planetID, err := utils.ParseI64(c.Param("planetID"))
 	if err != nil {
@@ -326,4 +326,15 @@ func ManualTimerTx(botMap map[string]wrapper.Prioritizable, txTimer *time.Timer)
 		log.Println("Manual Mode Expired!")
 		// do something for timeout, like change state
 	}
+}
+
+// GetLfBonusesHandler ...
+func GetLfBonusesHandler(c echo.Context) error {
+	bot := c.Get("bot").(*wrapper.OGame)
+	lfBonuses, err := bot.GetLfBonuses()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, wrapper.ErrorResp(http.StatusInternalServerError, err.Error()))
+	}
+	return c.JSON(http.StatusOK, wrapper.SuccessResp(lfBonuses))
+
 }
