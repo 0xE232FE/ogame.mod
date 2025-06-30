@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 )
 
@@ -771,12 +770,7 @@ func postSessionsReq(params *loginParams, gameEnvironmentID, platformGameID stri
 	}
 
 	if otpSecret != "" {
-		passcode, err := totp.GenerateCodeCustom(otpSecret, time.Now(), totp.ValidateOpts{
-			Period:    30,
-			Skew:      1,
-			Digits:    otp.DigitsSix,
-			Algorithm: otp.AlgorithmSHA1,
-		})
+		passcode, err := totp.GenerateCode(otpSecret, time.Now())
 		if err != nil {
 			return nil, err
 		}
@@ -862,6 +856,7 @@ type Server struct {
 	MultiLanguage int64
 	AvailableOn   []string
 	Settings      any
+	MaintenanceOn any // 0 for false, <unknown> for true
 }
 
 func (s Server) OGameSettings() OGameServerSettings {
@@ -1105,6 +1100,7 @@ func GetLoginLink(ctx context.Context, device Device, platform Platform, lobby, 
 }
 
 // ExecLoginLink ...
+// https://sXXX-en.ogame.gameforge.com/game/lobbylogin.php?id=100000&token=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 func ExecLoginLink(ctx context.Context, client HttpClient, loginLink string) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, loginLink, nil)
 	if err != nil {

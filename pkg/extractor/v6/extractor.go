@@ -140,6 +140,16 @@ func (e *Extractor) ExtractIsInVacation(pageHTML []byte) (bool, error) {
 	return e.ExtractIsInVacationFromDoc(doc), nil
 }
 
+// ExtractAttackBlock ...
+func (e *Extractor) ExtractAttackBlock(pageHTML []byte) (bool, time.Time, error) {
+	panic("implement me")
+}
+
+// ExtractAttackBlockFromDoc ...
+func (e *Extractor) ExtractAttackBlockFromDoc(doc *goquery.Document) (bool, time.Time) {
+	panic("implement me")
+}
+
 // ExtractPlanets ...
 func (e *Extractor) ExtractPlanets(pageHTML []byte) ([]ogame.Planet, error) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
@@ -1093,4 +1103,14 @@ func (e *Extractor) ExtractLfSlotsFromDoc(doc *goquery.Document) [18]ogame.LfSlo
 // ExtractArtefactsFromDoc ...
 func (e *Extractor) ExtractArtefactsFromDoc(doc *goquery.Document) (int64, int64) {
 	panic("not implemented")
+}
+
+// ExtractChapter ...
+func (e *Extractor) ExtractChapter(pageHTML []byte) (ogame.Chapter, error) {
+	panic("implement me")
+}
+
+// ExtractChapterFromDoc ...
+func (e *Extractor) ExtractChapterFromDoc(document *goquery.Document) (ogame.Chapter, error) {
+	panic("implement me")
 }

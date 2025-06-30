@@ -759,8 +759,10 @@ func (b *OGame) logout() error {
 	if err != nil {
 		return err
 	}
-	if err := b.device.GetClient().Jar.(*cookiejar.Jar).Save(); err != nil {
-		return err
+	if j, ok := b.device.GetClient().Jar.(*cookiejar.Jar); ok {
+		if err := j.Save(); err != nil {
+			return err
+		}
 	}
 	b.softLogout()
 	return nil
@@ -895,7 +897,15 @@ func (b *OGame) execRequest(method, finalURL string, payload, vals url.Values) (
 	}
 
 	req = req.WithContext(b.ctx)
-	resp, err := b.device.GetClient().Do(req)
+	var resp *http.Response
+	if vals.Get("component") == "support" {
+		err = b.device.GetClient().WithTransport(b.loginProxyTransport, func(client *httpclient.Client) error {
+			resp, err = client.Do(req)
+			return err
+		})
+	} else {
+		resp, err = b.device.GetClient().Do(req)
+	}
 	if err != nil {
 		return []byte{}, err
 	}
@@ -996,9 +1006,11 @@ func (b *OGame) pageContent(method string, vals, payload url.Values, opts ...Opt
 	var pageHTMLBytes []byte
 
 	clb := func() (err error) {
-		if method == http.MethodPost {
+		if method == http.MethodPost || vals.Get("component") == "support" {
 			// Needs to be inside the withRetry, so if we need to re-login the redirect is back for the login call
 			// Prevent redirect (301) https://stackoverflow.com/a/38150816/4196220
+			// Content returned on "support" endpoint:
+			// <script>document.location.href='https://ogame.support.gameforge.com/index.php?fld=en&sso=login&key=100000-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX&origin=sXXX-en.ogame.gameforge.com'</script>
 			client := b.device.GetClient()
 			client.CheckRedirect = func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }
 			defer func() { client.CheckRedirect = nil }()
@@ -1841,7 +1853,8 @@ func (b *OGame) getPhalanx(moonID ogame.MoonID, coord ogame.Coordinate) ([]ogame
 	}
 
 	// Verify that coordinate is in phalanx range
-	phalanxRange := ogame.SensorPhalanx.GetRange(phalanxLvl, b.isDiscoverer())
+	lfBonuses, _ := b.getCachedLfBonuses()
+	phalanxRange := ogame.SensorPhalanx.GetRange(phalanxLvl, b.isDiscoverer(), lfBonuses.MiscBonuses.PhalanxRange)
 	if moon.GetCoordinate().Galaxy != coord.Galaxy ||
 		systemDistance(b.cache.serverData.Systems, moon.GetCoordinate().System, coord.System, b.cache.serverData.DonutSystem) > phalanxRange {
 		return res, errors.New("coordinate not in phalanx range")
@@ -3320,6 +3333,10 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 		return zeroFleet, ogame.ErrInvalidPlanetID
 	}
 
+	if attackBlockActivated, blockedUntil := b.extractor.ExtractAttackBlockFromDoc(fleet1Doc); attackBlockActivated {
+		return zeroFleet, ogame.NewAttackBlockActivatedErr(blockedUntil)
+	}
+
 	if b.extractor.ExtractIsInVacationFromDoc(fleet1Doc) {
 		return zeroFleet, ogame.ErrAccountInVacationMode
 	}
@@ -3532,7 +3549,14 @@ func (b *OGame) fastMiniFleetSpy(coord ogame.Coordinate, shipCount int64, option
 		return res, err
 	}
 	if !res.Response.Success {
-		return res, errors.New(res.Response.Message)
+		msg := res.Response.Message
+		rgx := regexp.MustCompile(`\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}`)
+		if match := rgx.FindString(msg); match != "" {
+			if blockedUntil, err := time.Parse("02.01.2006 15:04:05", match); err == nil {
+				return res, ogame.NewAttackBlockActivatedErr(blockedUntil)
+			}
+		}
+		return res, errors.New(msg)
 	}
 	return res, nil
 }
@@ -4308,6 +4332,44 @@ func (b *OGame) getPositionsAvailableForDiscoveryFleet(galaxy int64, system int6
 	}
 
 	return availablePositions, nil
+}
+
+func (b *OGame) getChapter(chapterID int64) (ogame.Chapter, error) {
+	pageHTML, err := b.getPageContent(url.Values{
+		"page":      {"ajax"},
+		"component": {"ipioverview"},
+		"action":    {"overviewLayer"},
+		"ajax":      {"1"},
+		"chapterId": {utils.FI64(chapterID)},
+	})
+	if err != nil {
+		return ogame.Chapter{}, err
+	}
+	return b.extractor.ExtractChapter(pageHTML)
+}
+
+func (b *OGame) chapterClaimAll(chapterID int64) error {
+	_, err := b.getPageContent(url.Values{
+		"page":      {"ajax"},
+		"component": {"ipioverview"},
+		"action":    {"collectChapter"},
+		"ajax":      {"1"},
+		"token":     {b.cache.token},
+		"chapterId": {utils.FI64(chapterID)},
+	})
+	return err
+}
+
+func (b *OGame) chapterCollectReward(taskID int64) error {
+	_, err := b.getPageContent(url.Values{
+		"page":      {"ajax"},
+		"component": {"ipioverview"},
+		"action":    {"collectTask"},
+		"ajax":      {"1"},
+		"token":     {b.cache.token},
+		"taskId":    {utils.FI64(taskID)},
+	})
+	return err
 }
 
 func (b *OGame) selectLfResearchSelect(planetID ogame.PlanetID, slotNumber int64) error {

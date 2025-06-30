@@ -33,6 +33,7 @@ type FullPageExtractorBytes interface {
 	ExtractEngineer(pageHTML []byte) (bool, error)
 	ExtractGeologist(pageHTML []byte) (bool, error)
 	ExtractIsInVacation(pageHTML []byte) (bool, error)
+	ExtractAttackBlock(pageHTML []byte) (bool, time.Time, error)
 	ExtractIsMobile(pageHTML []byte) (bool, error)
 	ExtractLifeformEnabled(pageHTML []byte) bool
 	ExtractMoon(pageHTML []byte, v any) (ogame.Moon, error)
@@ -60,6 +61,7 @@ type FullPageExtractorDoc interface {
 	ExtractCommanderFromDoc(*goquery.Document) bool
 	ExtractEngineerFromDoc(*goquery.Document) bool
 	ExtractGeologistFromDoc(*goquery.Document) bool
+	ExtractAttackBlockFromDoc(doc *goquery.Document) (bool, time.Time)
 	ExtractIsInVacationFromDoc(*goquery.Document) bool
 	ExtractIsMobileFromDoc(*goquery.Document) bool
 	ExtractMoonFromDoc(*goquery.Document, any) (ogame.Moon, error)
@@ -585,6 +587,9 @@ type Extractor interface {
 	ExtractHiddenFields(pageHTML []byte) (url.Values, error)
 
 	ExtractHiddenFieldsFromDoc(*goquery.Document) url.Values
+
+	ExtractChapter(pageHTML []byte) (ogame.Chapter, error)
+	ExtractChapterFromDoc(*goquery.Document) (ogame.Chapter, error)
 }
 
 // Compile time checks to ensure type satisfies Extractor interface

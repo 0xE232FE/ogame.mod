@@ -140,13 +140,15 @@ func (b *OGame) getPhpSessIDFromCookie() string {
 
 func (b *OGame) getAndExecLoginLink(userAccount gameforge.Account, token string) (string, []byte, error) {
 	b.debug("get login link")
-	loginLink, err := gameforge.GetLoginLink(b.ctx, b.device, PLATFORM, b.lobby, token, userAccount)
-	if err != nil {
-		return "", nil, err
-	}
-	b.debug("login to universe")
 	var pageHTML []byte
+	var loginLink string
+	var err error
 	err = b.device.GetClient().WithTransport(b.loginProxyTransport, func(client *httpclient.Client) error {
+		loginLink, err = gameforge.GetLoginLink(b.ctx, b.device, PLATFORM, b.lobby, token, userAccount)
+		if err != nil {
+			return err
+		}
+		b.debug("login to universe")
 		pageHTML, err = gameforge.ExecLoginLink(b.ctx, client, loginLink)
 		return err
 	})
@@ -160,8 +162,10 @@ func (b *OGame) loginPart3Tmp(userAccount gameforge.Account, page *parser.Overvi
 	if err := b.loginPart3(userAccount, page); err != nil {
 		return err
 	}
-	if err := b.device.GetClient().Jar.(*cookiejar.Jar).Save(); err != nil {
-		return err
+	if j, ok := b.device.GetClient().Jar.(*cookiejar.Jar); ok {
+		if err := j.Save(); err != nil {
+			return err
+		}
 	}
 	b.execInterceptorCallbacks(http.MethodGet, loginLink, nil, nil, pageHTML)
 	return nil
