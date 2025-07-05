@@ -3910,13 +3910,12 @@ func (b *OGame) deleteAllMessagesFromTab(tabID ogame.MessagesTabID) error {
 		return err
 	}
 	payload := url.Values{
-		"tabid":     {utils.FI64(tabID)},
-		"messageId": {utils.FI64(-1)},
-		"action":    {"103"},
-		"ajax":      {"1"},
-		"token":     {token},
+		"activeSubTab": {utils.FI64(tabID)},
+		"messageId":    {utils.FI64(-1)},
+		"showTrash":    {"false"},
+		"token":        {token},
 	}
-	pageHTML, err := b.postPageContent(url.Values{"page": {"messages"}}, payload)
+	pageHTML, err := b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {"messages"}, "action": {"flagDeleteAll"}}, payload)
 	var res struct {
 		Status       string `json:"status"`
 		Message      string `json:"message"`
