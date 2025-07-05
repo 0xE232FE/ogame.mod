@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/pquerna/otp/totp"
 	"io"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/pquerna/otp/totp"
 )
 
 // TokenCookieName gameforge cookie name for token id
@@ -737,7 +738,7 @@ func postSessionsReq(params *loginParams, gameEnvironmentID, platformGameID stri
 	}
 
 	var payload = struct {
-		Identity                string `json:"identity"`
+		Email                   string `json:"email"`
 		Password                string `json:"password"`
 		Locale                  string `json:"locale"`
 		GfLang                  string `json:"gfLang"`
@@ -746,11 +747,13 @@ func postSessionsReq(params *loginParams, gameEnvironmentID, platformGameID stri
 		GameEnvironmentID       string `json:"gameEnvironmentId"`
 		AutoGameAccountCreation bool   `json:"autoGameAccountCreation"`
 	}{
-		Identity:                username,
-		Password:                password,
-		Locale:                  "en_GB",
-		GfLang:                  "en",
-		PlatformGameID:          platformGameID,
+		Email:    username,
+		Password: password,
+		Locale:   "en_GB",
+
+		GfLang:         "en",
+		PlatformGameID: platformGameID,
+
 		Blackbox:                blackboxPrefix + blackbox,
 		GameEnvironmentID:       gameEnvironmentID,
 		AutoGameAccountCreation: false,
@@ -759,7 +762,7 @@ func postSessionsReq(params *loginParams, gameEnvironmentID, platformGameID stri
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(http.MethodPost, "https://gameforge.com/api/v1/auth/thin/sessions", bytes.NewReader(by))
+	req, err := http.NewRequest(http.MethodPost, "https://gameforge.com/api/v1/auth/sessions", bytes.NewReader(by))
 	if err != nil {
 		return nil, err
 	}
