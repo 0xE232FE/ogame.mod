@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/alaingilbert/ogame/pkg/device"
-	"github.com/alaingilbert/ogame/pkg/gameforge/solvers"
 	"github.com/alaingilbert/ogame/pkg/wrapper"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -331,7 +330,7 @@ func start(ctx context.Context, c *cli.Command) error {
 		APINewHostname: apiNewHostname,
 	}
 	if njaApiKey != "" {
-		params.CaptchaSolver = solvers.NinjaSolver(njaApiKey)
+		params.CaptchaSolver = TbotSolver(njaApiKey)
 	}
 
 	bot, err := wrapper.NewWithParams(params)
@@ -456,6 +455,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/planets/:planetID/resources", wrapper.GetResourcesHandler)
 	e.POST("/bot/planets/:planetID/send-fleet", wrapper.SendFleetHandler)
 	e.POST("/bot/planets/:planetID/send-discovery", wrapper.SendDiscoveryHandler)
+
 	e.POST("/bot/planets/:planetID/send-ipm", wrapper.SendIPMHandler)
 	e.GET("/bot/moons/:moonID/phalanx/:galaxy/:system/:position", wrapper.PhalanxHandler)
 	e.POST("/bot/moons/:moonID/jump-gate", wrapper.JumpGateHandler)
