@@ -336,5 +336,100 @@ func GetLfBonusesHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, wrapper.ErrorResp(http.StatusInternalServerError, err.Error()))
 	}
 	return c.JSON(http.StatusOK, wrapper.SuccessResp(lfBonuses))
+}
 
+// GetPositionsAvailableForDiscoveryFleet...
+// curl 127.0.0.1:1234/bot/planets/:planetID/get-system-available-discovery -d 'galaxy=6&system=473'
+func GetPositionsAvailableForDiscoveryFleet(c echo.Context) error {
+	bot := c.Get("bot").(*wrapper.OGame)
+	planetID, err := utils.ParseI64(c.Param("planetID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid planet id"))
+	}
+	var opts wrapper.Option
+	if planetID != 0 {
+		opts = wrapper.ChangePlanet(ogame.CelestialID(planetID))
+	}
+
+	if err := c.Request().ParseForm(); err != nil {
+		return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid form"))
+	}
+
+	where := ogame.Coordinate{Type: ogame.PlanetType}
+	for key, values := range c.Request().PostForm {
+		switch key {
+		case "galaxy":
+			galaxy, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid galaxy"))
+			}
+			where.Galaxy = galaxy
+		case "system":
+			system, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid system"))
+			}
+			where.System = system
+		case "position":
+			position, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid position"))
+			}
+			where.Position = position
+		}
+	}
+	var coords []ogame.Coordinate
+	if coords, err = bot.GetPositionsAvailableForDiscoveryFleet(where.Galaxy, where.System, opts); err != nil {
+		return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, err.Error()))
+	}
+	return c.JSON(http.StatusOK, wrapper.SuccessResp(coords))
+}
+
+// GetAvailableDiscoveries...
+// curl 127.0.0.1:1234/bot/planets/:planetID/get-available-discoveries
+func GetAvailableDiscoveries(c echo.Context) error {
+	bot := c.Get("bot").(*wrapper.OGame)
+	bot.GetAvailableDiscoveries()
+
+	planetID, err := utils.ParseI64(c.Param("planetID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid planet id"))
+	}
+	var opts wrapper.Option
+	if planetID != 0 {
+		opts = wrapper.ChangePlanet(ogame.CelestialID(planetID))
+	}
+
+	if err := c.Request().ParseForm(); err != nil {
+		return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid form"))
+	}
+
+	where := ogame.Coordinate{Type: ogame.PlanetType}
+	for key, values := range c.Request().PostForm {
+		switch key {
+		case "galaxy":
+			galaxy, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid galaxy"))
+			}
+			where.Galaxy = galaxy
+		case "system":
+			system, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid system"))
+			}
+			where.System = system
+		case "position":
+			position, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, "invalid position"))
+			}
+			where.Position = position
+		}
+	}
+	var count int64
+	if count, err = bot.GetAvailableDiscoveries(opts); err != nil {
+		return c.JSON(http.StatusBadRequest, wrapper.ErrorResp(400, err.Error()))
+	}
+	return c.JSON(http.StatusOK, wrapper.SuccessResp(count))
 }
