@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/PuerkitoBio/goquery"
 	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
 	"github.com/alaingilbert/ogame/pkg/ogame"
 	"github.com/alaingilbert/ogame/pkg/utils"
 	"golang.org/x/net/html"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func extractCombatReportMessagesFromDoc(doc *goquery.Document) ([]ogame.CombatReportSummary, int64, error) {
@@ -485,6 +486,9 @@ func assignBonusValue(s *goquery.Selection, b *ogame.LfBonuses, category string,
 		if subcategory == "Expedition" {
 			extractResourcesExpeditionBonus(s, b)
 		}
+		if subcategory == "0" || subcategory == "1" || subcategory == "2" {
+			extractResourcesProductionBonus(s, b, subcategory)
+		}
 	case "Characterclasses":
 		if subcategory == "3" {
 			txt := s.Find("div.subCategoryBonus").First().Text()
@@ -508,6 +512,18 @@ func assignBonusValue(s *goquery.Selection, b *ogame.LfBonuses, category string,
 func extractResourcesExpeditionBonus(s *goquery.Selection, l *ogame.LfBonuses) {
 	txt := s.Find("div.subCategoryBonus").First().Text()
 	l.LfResourceBonuses.ResourcesExpedition = extractBonusFromStringPercentage(txt)
+}
+
+func extractResourcesProductionBonus(s *goquery.Selection, l *ogame.LfBonuses, x string) {
+	txt := s.Find("div.subCategoryBonus").First().Text()
+	switch x {
+	case "0":
+		l.LfResourceBonuses.ResourcesMetalProduction = extractBonusFromStringPercentage(txt)
+	case "1":
+		l.LfResourceBonuses.ResourcesCrystalProduction = extractBonusFromStringPercentage(txt)
+	case "2":
+		l.LfResourceBonuses.ResourcesDeuteriumProduction = extractBonusFromStringPercentage(txt)
+	}
 }
 
 // Extracts cost reduction
