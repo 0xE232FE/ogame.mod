@@ -738,28 +738,29 @@ func postSessionsReq(params *loginParams, gameEnvironmentID, platformGameID stri
 	}
 
 	var payload = struct {
-		Email                   string `json:"identity"`
-		Password                string `json:"password"`
-		Locale                  string `json:"locale"`
-		GfLang                  string `json:"gfLang"`
-		PlatformGameID          string `json:"gameId"`
-		GameEnvironmentID       string `json:"gameEnvironmentId"`
-		Blackbox                string `json:"blackbox"`
-		AutoGameAccountCreation bool   `json:"autoGameAccountCreation"`
+		Blackbox          string `json:"blackbox"`
+		GameEnvironmentID string `json:"gameEnvironmentId"`
+		PlatformGameID    string `json:"gameId"`
+		GfLang            string `json:"gfLang"`
+		Email             string `json:"identity"`
+		Locale            string `json:"locale"`
+		Password          string `json:"password"`
+		//AutoGameAccountCreation bool   `json:"autoGameAccountCreation"`
 	}{
-		Email:                   username,
-		Password:                password,
-		Locale:                  "en-GB",
-		GfLang:                  "en",
-		PlatformGameID:          platformGameID,
-		Blackbox:                blackboxPrefix + blackbox,
-		GameEnvironmentID:       gameEnvironmentID,
-		AutoGameAccountCreation: false,
+		Email:             username,
+		Password:          password,
+		Locale:            "en-GB",
+		GfLang:            "en",
+		PlatformGameID:    platformGameID,
+		Blackbox:          blackboxPrefix + blackbox,
+		GameEnvironmentID: gameEnvironmentID,
+		//AutoGameAccountCreation: false,
 	}
 	by, err := json.Marshal(&payload)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Data: %s", string(by))
 	req, err := http.NewRequest(http.MethodPost, "https://spark-web.gameforge.com/api/v2/authProviders/mauth/sessions", bytes.NewReader(by))
 	if err != nil {
 		return nil, err
@@ -1026,7 +1027,7 @@ func GetLoginLink(ctx context.Context, device Device, platform Platform, lobby, 
 	var payload = struct {
 		Blackbox      string `json:"blackbox"`
 		Id            int64  `json:"id"`
-		ClickedButton string `json:"clickedButton"`
+		ClickedButton string `json:"account_list"`
 		Server        struct {
 			Language string `json:"language"`
 			Number   int64  `json:"number"`

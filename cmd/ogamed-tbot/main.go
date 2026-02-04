@@ -185,7 +185,7 @@ func main() {
 		&cli.IntFlag{
 			Name:    "device-color",
 			Usage:   "Set the Device Color depth",
-			Value:   24,
+			Value:   16,
 			Sources: cli.EnvVars("OGAMED_DEVICECOLOR"),
 		},
 		&cli.IntFlag{
@@ -203,7 +203,7 @@ func main() {
 		&cli.StringFlag{
 			Name:    "device-timezone",
 			Usage:   "Set the Device Timezone",
-			Value:   "America/Los_Angeles",
+			Value:   "Europe/Berlin",
 			Sources: cli.EnvVars("OGAMED_DEVICETIMEZONE"),
 		},
 		&cli.StringFlag{
@@ -215,7 +215,7 @@ func main() {
 		&cli.StringFlag{
 			Name:    "device-user-agent",
 			Usage:   "Set the Device User-Agent",
-			Value:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
+			Value:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
 			Sources: cli.EnvVars("OGAMED_DEVICEUSERAGENT"),
 		},
 	}
