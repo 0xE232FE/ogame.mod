@@ -10,7 +10,7 @@ import (
 const (
 	OverviewPageName         = "overview"
 	PreferencesPageName      = "preferences"
-	ResourceSettingsPageName = "resourceSettings"
+	ResourceSettingsPageName = "resourcesettings"
 	DefensesPageName         = "defenses"
 	LfBuildingsPageName      = "lfbuildings"
 	LfResearchPageName       = "lfresearch"
