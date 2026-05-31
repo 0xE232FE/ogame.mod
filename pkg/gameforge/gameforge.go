@@ -760,7 +760,7 @@ func postSessionsReq(params *loginParams, gameEnvironmentID, platformGameID stri
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Data: %s", string(by))
+
 	req, err := http.NewRequest(http.MethodPost, "https://spark-web.gameforge.com/api/v2/authProviders/mauth/sessions", bytes.NewReader(by))
 	if err != nil {
 		return nil, err
