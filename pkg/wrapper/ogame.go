@@ -9,22 +9,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/alaingilbert/mtx"
-	"github.com/alaingilbert/ogame/pkg/device"
-	"github.com/alaingilbert/ogame/pkg/exponentialBackoff"
-	"github.com/alaingilbert/ogame/pkg/extractor"
-	"github.com/alaingilbert/ogame/pkg/extractor/v12_0_0"
-	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
-	"github.com/alaingilbert/ogame/pkg/gameforge"
-	"github.com/alaingilbert/ogame/pkg/httpclient"
-	"github.com/alaingilbert/ogame/pkg/ogame"
-	"github.com/alaingilbert/ogame/pkg/parser"
-	"github.com/alaingilbert/ogame/pkg/taskRunner"
-	"github.com/alaingilbert/ogame/pkg/utils"
-	cookiejar "github.com/orirawlings/persistent-cookiejar"
-	"golang.org/x/net/proxy"
-	"golang.org/x/net/websocket"
 	"io"
 	"log"
 	"math"
@@ -40,6 +24,24 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/alaingilbert/mtx"
+	"github.com/alaingilbert/ogame/pkg/device"
+	"github.com/alaingilbert/ogame/pkg/exponentialBackoff"
+	"github.com/alaingilbert/ogame/pkg/extractor"
+	"github.com/alaingilbert/ogame/pkg/extractor/v12_0_0"
+	v6 "github.com/alaingilbert/ogame/pkg/extractor/v6"
+	"github.com/alaingilbert/ogame/pkg/gameforge"
+	"github.com/alaingilbert/ogame/pkg/httpclient"
+	"github.com/alaingilbert/ogame/pkg/ogame"
+	"github.com/alaingilbert/ogame/pkg/parser"
+	"github.com/alaingilbert/ogame/pkg/taskRunner"
+	"github.com/alaingilbert/ogame/pkg/utils"
+	"github.com/hashicorp/go-version"
+	cookiejar "github.com/orirawlings/persistent-cookiejar"
+	"golang.org/x/net/proxy"
+	"golang.org/x/net/websocket"
 )
 
 // OGame is a client for ogame.org. It is safe for concurrent use by
@@ -3087,6 +3089,15 @@ func (b *OGame) cancelResearch(celestialID ogame.CelestialID) error {
 }
 
 func (b *OGame) fetchResources(celestialID ogame.CelestialID) (ogame.ResourcesDetails, error) {
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil {
+		if isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+			pageJSON, err := b.postPageContent(url.Values{"page": {"componentOnly"}, "component": {FetchResourcesbarAjaxPageName}, "action": {"fetchResources"}, "asJson": {"1"}}, nil, ChangePlanet(celestialID))
+			if err != nil {
+				return ogame.ResourcesDetails{}, err
+			}
+			return b.extractor.ExtractResourcesDetails(pageJSON)
+		}
+	}
 	pageJSON, err := b.getPage(FetchResourcesPageName, ChangePlanet(celestialID))
 	if err != nil {
 		return ogame.ResourcesDetails{}, err

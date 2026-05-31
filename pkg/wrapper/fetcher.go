@@ -41,6 +41,7 @@ const (
 	RocketlayerPageName            = "rocketlayer"
 	FetchEventboxAjaxPageName      = "fetchEventbox"
 	FetchResourcesAjaxPageName     = "fetchResources"
+	FetchResourcesbarAjaxPageName  = "resourcesbar"
 	GalaxyContentAjaxPageName      = "galaxyContent"
 	GalaxyAjaxPageName             = "galaxy"
 	EventListAjaxPageName          = "eventList"
