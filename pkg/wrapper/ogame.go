@@ -2603,6 +2603,13 @@ func (b *OGame) galaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemI
 		"system": {utils.FI64(system)},
 	}
 	vals := url.Values{"page": {"ingame"}, "component": {"galaxy"}, "action": {"fetchGalaxyContent"}, "ajax": {"1"}, "asJson": {"1"}}
+
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil {
+		if isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+			vals = url.Values{"page": {"ingame"}, "component": {"galaxy"}, "action": {"fetchSolarSystemData"}, "asJson": {"1"}}
+		}
+	}
+
 	pageHTML, err := b.postPageContent(vals, payload, opts...)
 	if err != nil {
 		return res, err
@@ -2622,6 +2629,29 @@ func (b *OGame) galaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemI
 }
 
 func (b *OGame) getGalaxyPage(galaxy int64, system int64, opts ...Option) (*GalaxyPageContent, error) {
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil {
+		if isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+			// Get galaxy page content for the desired system.
+			by, err := b.postPageContent(url.Values{
+				"page":      {"ingame"},
+				"component": {"galaxy"},
+				"action":    {"fetchSolarSystemData"},
+				"asJson":    {"1"},
+			}, url.Values{
+				"galaxy": {strconv.Itoa(int(galaxy))},
+				"system": {strconv.Itoa(int(system))},
+			}, opts...)
+			if err != nil {
+				return nil, err
+			}
+			// Parse the json result, only defining the type for the GalaxyContent (Position and AvailableMissions properties).
+			var res GalaxyPageContent
+			if err = json.Unmarshal(by, &res); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	// Get galaxy page content for the desired system.
 	by, err := b.postPageContent(url.Values{
 		"page":      {"ingame"},
@@ -3280,6 +3310,7 @@ type CheckTargetResponse struct {
 	} `json:"targetPlanet"`
 	Errors          []OGameError `json:"errors"`
 	TargetOk        bool         `json:"targetOk"`
+	Message         string       `json:"message"`
 	Components      []any        `json:"components"`
 	EmptySystems    int64        `json:"emptySystems"`
 	InactiveSystems int64        `json:"inactiveSystems"`
@@ -3297,7 +3328,8 @@ func (b *OGame) checkTarget(ships ogame.ShipsInfos, where ogame.Coordinate, opts
 	payload.Set("position", utils.FI64(where.Position))
 	payload.Set("type", utils.FI64(where.Type))
 	payload.Set("union", "0")
-	by, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload, opts...)
+	//by, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload, opts...)
+	by, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "asJson": {"1"}}, payload, opts...)
 	if err != nil {
 		return out, err
 	}
@@ -3418,7 +3450,8 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 	}
 
 	// Check
-	by1, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload)
+	//by1, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload)
+	by1, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "asJson": {"1"}}, payload)
 	if err != nil {
 		return zeroFleet, err
 	}
@@ -3427,7 +3460,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 		return zeroFleet, err
 	}
 
-	if !checkRes.TargetOk {
+	if !checkRes.TargetOk && checkRes.Message != "ok" {
 		if len(checkRes.Errors) > 0 {
 			return zeroFleet, errors.New(checkRes.Errors[0].Message + " (" + strconv.Itoa(checkRes.Errors[0].Error) + ")")
 		}
