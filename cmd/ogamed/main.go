@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"crypto/subtle"
+	"log"
+	"os"
+	"strconv"
+
 	"github.com/alaingilbert/ogame/pkg/device"
 	"github.com/alaingilbert/ogame/pkg/gameforge/solvers"
 	"github.com/alaingilbert/ogame/pkg/wrapper"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/urfave/cli/v3"
-	"log"
-	"os"
-	"strconv"
 )
 
 var version = "0.0.0"
@@ -158,6 +159,7 @@ func main() {
 			Sources: cli.EnvVars("OGAMED_DEVICENAME"),
 		},
 	}
+	app.Flags = append(app.Flags, defenderFlags...)
 	app.Action = start
 	if err := app.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
@@ -169,6 +171,8 @@ func start(ctx context.Context, c *cli.Command) error {
 	username := c.String("username")
 	password := c.String("password")
 	language := c.String("language")
+	playerID := int64(c.Int("playerid"))
+	bearerToken := c.String("bearer")
 	autoLogin := c.Bool("auto-login")
 	host := c.String("host")
 	port := int(c.Int("port"))
@@ -198,6 +202,7 @@ func start(ctx context.Context, c *cli.Command) error {
 		SetScreenHeight(900).
 		SetTimezone("America/Los_Angeles").
 		SetLanguages("en-US,en").
+		SetUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36").
 		Build()
 	if err != nil {
 		panic(err)
@@ -210,6 +215,8 @@ func start(ctx context.Context, c *cli.Command) error {
 		Username:       username,
 		Password:       password,
 		Lang:           language,
+		PlayerID:       playerID,
+		BearerToken:    bearerToken,
 		AutoLogin:      autoLogin,
 		Proxy:          proxyAddr,
 		ProxyUsername:  proxyUsername,
@@ -255,6 +262,9 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.HideBanner = true
 	e.HidePort = true
 	e.Debug = false
+
+	wireDefender(c, bot, e)
+
 	e.GET("/", wrapper.HomeHandler)
 	e.GET("/tasks", wrapper.TasksHandler)
 

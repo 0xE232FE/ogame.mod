@@ -9,7 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alaingilbert/ogame/cmd/ogamed-tbot/buildqueue"
 	"github.com/alaingilbert/ogame/pkg/device"
+	"github.com/alaingilbert/ogame/pkg/gameforge"
+	"github.com/alaingilbert/ogame/pkg/httpclient"
 	"github.com/alaingilbert/ogame/pkg/wrapper"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -482,6 +485,30 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/favicon.ico", GetStaticHandler)
 	e.GET("/game/sw.js", GetStaticHandler)
 
+	tmplString, err := os.ReadFile(`D:\TBot\develop-ogamed-tbot\cmd\ogamed-tbot\buildqueue\build_queue.gohtml`)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	store, err := buildqueue.NewBoltStore(bot.GetUsername() + "-" + bot.GetUniverseName() + "-" + bot.GetLanguage() + "-queues.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer store.Close()
+
+	h, err := buildqueue.NewHandler(bot, string(tmplString), store)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	e.GET("/build-queue", h.Page)
+	e.POST("/build-queue/queue", h.QueueAdd)
+	e.POST("/build-queue/queue/:uid", h.QueueRemove)
+	e.PUT("/build-queue/queue", h.QueueReorder)
+	e.DELETE("/build-queue/queue", h.QueueClear)
+
+	e.POST("/build-queue/execute", h.Execute)
+
 	// JSON API
 	/*
 		/api/serverData.xml
@@ -498,4 +525,21 @@ func start(ctx context.Context, c *cli.Command) error {
 	}
 	log.Println("Disable TLS Support")
 	return e.Start(host + ":" + strconv.Itoa(port))
+}
+
+func AddNewAccount(bot *wrapper.OGame, lobby, universe, lang string) error {
+	client := httpclient.NewClient("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36")
+	ctx := context.Background()
+	servers, err := gameforge.GetServers(ctx, client, gameforge.OGAME, lobby)
+	if err != nil {
+		return err
+	}
+	var serverID int
+	for _, s := range servers {
+		if s.Name == universe && s.Language == lang {
+			serverID = int(s.Number)
+		}
+	}
+	_, err = bot.AddAccount(serverID, lang)
+	return err
 }

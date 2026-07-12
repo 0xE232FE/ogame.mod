@@ -41,6 +41,7 @@ require (
 	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
+	go.etcd.io/bbolt v1.4.3 // indirect
 	go4.org v0.0.0-20200411211856-f5505b9728dd // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect

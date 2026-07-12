@@ -480,6 +480,8 @@ func (b *OGame) doReqWithLoginProxyTransport(req *http.Request) (resp *http.Resp
 func getTransport(proxy, username, password, proxyType string, config *tls.Config) (http.RoundTripper, error) {
 	var err error
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+
 	if proxyType == "socks5" {
 		transport, err = getSocks5Transport(proxy, username, password)
 	} else if proxyType == "http" {
@@ -497,7 +499,7 @@ func getProxyTransport(proxy, username, password string) (*http.Transport, error
 	if err != nil {
 		return nil, err
 	}
-	t := &http.Transport{Proxy: http.ProxyURL(proxyURL)}
+	t := &http.Transport{Proxy: http.ProxyURL(proxyURL), TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	if username != "" || password != "" {
 		basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
 		t.ProxyConnectHeader = http.Header{"Proxy-Authorization": {basicAuth}}
@@ -515,6 +517,7 @@ func getSocks5Transport(proxyAddress, username, password string) (*http.Transpor
 		return nil, err
 	}
 	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			return dialer.Dial(network, addr)
 		},
@@ -565,7 +568,16 @@ func getWebsocket(host, port string) (*websocket.Conn, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	// 1. Create a transport that skips verification
+	tmpTr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	// 2. Create a client using that transport
+	tmpClient := &http.Client{Transport: tmpTr}
+
+	resp, err := tmpClient.Do(req)
+	//resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get socket.io token: %w", err)
 	}
@@ -579,10 +591,28 @@ func getWebsocket(host, port string) (*websocket.Conn, error) {
 
 	origin := "https://" + host + ":" + port + "/"
 	wssURL := "wss://" + host + ":" + port + "/socket.io/?EIO=4&transport=websocket&sid=" + sid
-	ws, err := websocket.Dial(wssURL, "", origin)
+
+	// 1. Parse your URL and origin into a *websocket.Config
+	config, err := websocket.NewConfig(wssURL, origin)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial websocket: %w", err)
 	}
+
+	// 2. Inject a custom TLS configuration to skip verification
+	config.TlsConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	// 3. Dial using the configuration object instead of the basic websocket.Dial()
+	ws, err := websocket.DialConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to dial websocket: %w", err)
+	}
+
+	//ws, err := websocket.Dial(wssURL, "", origin)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to dial websocket: %w", err)
+	// }
 	return ws, nil
 }
 
@@ -949,6 +979,9 @@ func setCPParam(b *OGame, vals url.Values, cfg Options) {
 	}
 }
 
+//	http://192.168.178.53:9016/game/index.php?page=ingame&component=eventlist&action=catchEvents&ajax=1
+//
+// Err not logged on page :  eventList  |  http://192.168.178.53:9016/game/index.php?page=ingame&component=eventList&action=catchEvents&ajax=1
 func detectLoggedOut(method, page string, vals url.Values, pageHTML []byte) bool {
 	if vals.Get("allianceId") != "" {
 		return false
@@ -1025,12 +1058,11 @@ func (b *OGame) pageContent(method string, vals, payload url.Values, opts ...Opt
 		}
 
 		if detectLoggedOut(method, page, vals, pageHTMLBytes) {
-			b.error("Err not logged on page : ", page)
+			b.error("Err not logged on page : ", page, " | Method: ", method, " | ", finalURL)
 			saveNotLoggedHTML(page, pageHTMLBytes)
 			b.isConnectedAtom.Store(false)
 			return ogame.ErrNotLogged
 		}
-
 		return nil
 	}
 
@@ -1625,10 +1657,25 @@ func (b *OGame) cancelFleet(fleetID ogame.FleetID) error {
 	if err != nil {
 		return err
 	}
+	var ogVersion *version.Version
+	if ogVersion, err = version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil {
+		if isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+			token, err := page.ExtractToken()
+			if err != nil {
+				return err
+			}
+			if _, err = b.postPageContent(url.Values{"page": {"ingame"}, "component": {"movement"}, "action": {"recallFleet"}, "fleetId": {fleetID.String()}, "asJson": {"1"}}, url.Values{"token": {token}}); err != nil {
+				return err
+			}
+		}
+
+	}
+
 	token, err := page.ExtractCancelFleetToken(fleetID)
 	if err != nil {
 		return err
 	}
+
 	if _, err = b.getPageContent(url.Values{"page": {"ingame"}, "component": {"movement"}, "return": {fleetID.String()}, "token": {token}}); err != nil {
 		return err
 	}
@@ -2564,6 +2611,39 @@ func fixAttackEvents(attacks []ogame.AttackEvent, planets []Planet) {
 }
 
 func (b *OGame) getAttacks(opts ...Option) (out []ogame.AttackEvent, err error) {
+	var ogVersion *version.Version
+	if ogVersion, err = version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil {
+		if isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+			// Get galaxy page content for the desired system.
+			vals := url.Values{"page": {"ingame"}, "component": {"eventlist"}, "action": {"catchEvents"}, "ajax": {"1"}}
+			//var page parser.EventListAjaxPage
+			//page, err = getAjaxPage[parser.EventListAjaxPage](b, vals, opts...)
+			planets := b.getCachedPlanets()
+			ownCoords := getOwnCoordinates(planets)
+			//pageJSON := page.GetContent()
+			type EventList struct {
+				Content struct {
+					Eventlist string `json:"eventlist"`
+				} `json:"content"`
+				ServerTime   int    `json:"serverTime"`
+				NewAjaxToken string `json:"newAjaxToken"`
+			}
+			var eventListJson EventList
+			var pageHTML []byte
+			pageHTML, err = b.getPageContent(vals, opts...)
+			if err != nil {
+				return
+			}
+			json.Unmarshal(pageHTML, &eventListJson)
+			out, err = b.extractor.ExtractAttacks([]byte(eventListJson.Content.Eventlist), ownCoords)
+			if err != nil {
+				return
+			}
+			fixAttackEvents(out, planets)
+			return
+		}
+	}
+
 	vals := url.Values{"page": {"componentOnly"}, "component": {EventListAjaxPageName}, "ajax": {"1"}}
 	page, err := getAjaxPage[parser.EventListAjaxPage](b, vals, opts...)
 	if err != nil {
@@ -2603,6 +2683,13 @@ func (b *OGame) galaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemI
 		"system": {utils.FI64(system)},
 	}
 	vals := url.Values{"page": {"ingame"}, "component": {"galaxy"}, "action": {"fetchGalaxyContent"}, "ajax": {"1"}, "asJson": {"1"}}
+
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil {
+		if isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+			vals = url.Values{"page": {"ingame"}, "component": {"galaxy"}, "action": {"fetchSolarSystemData"}, "asJson": {"1"}}
+		}
+	}
+
 	pageHTML, err := b.postPageContent(vals, payload, opts...)
 	if err != nil {
 		return res, err
@@ -2622,6 +2709,29 @@ func (b *OGame) galaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemI
 }
 
 func (b *OGame) getGalaxyPage(galaxy int64, system int64, opts ...Option) (*GalaxyPageContent, error) {
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil {
+		if isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+			// Get galaxy page content for the desired system.
+			by, err := b.postPageContent(url.Values{
+				"page":      {"ingame"},
+				"component": {"galaxy"},
+				"action":    {"fetchSolarSystemData"},
+				"asJson":    {"1"},
+			}, url.Values{
+				"galaxy": {strconv.Itoa(int(galaxy))},
+				"system": {strconv.Itoa(int(system))},
+			}, opts...)
+			if err != nil {
+				return nil, err
+			}
+			// Parse the json result, only defining the type for the GalaxyContent (Position and AvailableMissions properties).
+			var res GalaxyPageContent
+			if err = json.Unmarshal(by, &res); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	// Get galaxy page content for the desired system.
 	by, err := b.postPageContent(url.Values{
 		"page":      {"ingame"},
@@ -3280,6 +3390,7 @@ type CheckTargetResponse struct {
 	} `json:"targetPlanet"`
 	Errors          []OGameError `json:"errors"`
 	TargetOk        bool         `json:"targetOk"`
+	Message         string       `json:"message"`
 	Components      []any        `json:"components"`
 	EmptySystems    int64        `json:"emptySystems"`
 	InactiveSystems int64        `json:"inactiveSystems"`
@@ -3297,7 +3408,8 @@ func (b *OGame) checkTarget(ships ogame.ShipsInfos, where ogame.Coordinate, opts
 	payload.Set("position", utils.FI64(where.Position))
 	payload.Set("type", utils.FI64(where.Type))
 	payload.Set("union", "0")
-	by, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload, opts...)
+	//by, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload, opts...)
+	by, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "asJson": {"1"}}, payload, opts...)
 	if err != nil {
 		return out, err
 	}
@@ -3418,7 +3530,8 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 	}
 
 	// Check
-	by1, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload)
+	//by1, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "ajax": {"1"}, "asJson": {"1"}}, payload)
+	by1, err := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"fleetdispatch"}, "action": {"checkTarget"}, "asJson": {"1"}}, payload)
 	if err != nil {
 		return zeroFleet, err
 	}
@@ -3427,7 +3540,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 		return zeroFleet, err
 	}
 
-	if !checkRes.TargetOk {
+	if !checkRes.TargetOk && checkRes.Message != "ok" {
 		if len(checkRes.Errors) > 0 {
 			return zeroFleet, errors.New(checkRes.Errors[0].Message + " (" + strconv.Itoa(checkRes.Errors[0].Error) + ")")
 		}

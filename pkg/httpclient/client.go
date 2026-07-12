@@ -3,6 +3,7 @@ package httpclient
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,6 +48,9 @@ func NewClient(userAgent string) *Client {
 	client := &Client{
 		Client: &http.Client{
 			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
 		},
 		maxRPS:    0,
 		userAgent: userAgent,
