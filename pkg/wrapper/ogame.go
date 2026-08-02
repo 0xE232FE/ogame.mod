@@ -2603,6 +2603,9 @@ func (b *OGame) galaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemI
 		"system": {utils.FI64(system)},
 	}
 	vals := url.Values{"page": {"ingame"}, "component": {"galaxy"}, "action": {"fetchGalaxyContent"}, "ajax": {"1"}, "asJson": {"1"}}
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil && isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+		vals = url.Values{"page": {"ingame"}, "component": {"galaxy"}, "action": {"fetchSolarSystemData"}, "asJson": {"1"}}
+	}
 	pageHTML, err := b.postPageContent(vals, payload, opts...)
 	if err != nil {
 		return res, err
@@ -2622,6 +2625,26 @@ func (b *OGame) galaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemI
 }
 
 func (b *OGame) getGalaxyPage(galaxy int64, system int64, opts ...Option) (*GalaxyPageContent, error) {
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil && isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+		by, err := b.postPageContent(url.Values{
+			"page":      {"ingame"},
+			"component": {"galaxy"},
+			"action":    {"fetchSolarSystemData"},
+			"asJson":    {"1"},
+		}, url.Values{
+			"galaxy": {strconv.Itoa(int(galaxy))},
+			"system": {strconv.Itoa(int(system))},
+		}, opts...)
+		if err != nil {
+			return nil, err
+		}
+		var res GalaxyPageContent
+		if err = json.Unmarshal(by, &res); err != nil {
+			return nil, err
+		}
+		return &res, nil
+	}
+
 	// Get galaxy page content for the desired system.
 	by, err := b.postPageContent(url.Values{
 		"page":      {"ingame"},
