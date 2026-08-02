@@ -3303,6 +3303,7 @@ type CheckTargetResponse struct {
 	} `json:"targetPlanet"`
 	Errors          []OGameError `json:"errors"`
 	TargetOk        bool         `json:"targetOk"`
+	Message         string       `json:"message"`
 	Components      []any        `json:"components"`
 	EmptySystems    int64        `json:"emptySystems"`
 	InactiveSystems int64        `json:"inactiveSystems"`
@@ -3450,9 +3451,13 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 		return zeroFleet, err
 	}
 
-	if !checkRes.TargetOk {
-		if len(checkRes.Errors) > 0 {
-			return zeroFleet, errors.New(checkRes.Errors[0].Message + " (" + strconv.Itoa(checkRes.Errors[0].Error) + ")")
+	targetAccepted := checkRes.TargetOk || (checkRes.Status == "success" && strings.EqualFold(strings.TrimSpace(checkRes.Message), "ok"))
+	if !targetAccepted {
+		if len(checkRes.Errors) > 0 && strings.TrimSpace(checkRes.Errors[0].Message) != "" {
+			return zeroFleet, fmt.Errorf("%s (%d)", checkRes.Errors[0].Message, checkRes.Errors[0].Error)
+		}
+		if message := strings.TrimSpace(checkRes.Message); message != "" && !strings.EqualFold(message, "ok") {
+			return zeroFleet, errors.New(message)
 		}
 		return zeroFleet, errors.New("target is not ok")
 	}
