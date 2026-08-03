@@ -458,9 +458,6 @@ func extractExpeditionMessagesFromDoc(doc *goquery.Document, location *time.Loca
 
 func extractLfBonusesFromDoc(doc *goquery.Document) (ogame.LfBonuses, error) {
 	b := ogame.NewLfBonuses()
-	if extractLfBonusesV13(doc, b) {
-		return *b, nil
-	}
 	for _, s := range doc.Find("bonus-item-content[data-toggable-target^=category]").EachIter() {
 		category := s.AttrOr("data-toggable-target", "")
 		if category == "categoryShips" || category == "categoryCostAndTime" || category == "categoryResources" || category == "categoryCharacterclasses" || category == "categoryMisc" {
@@ -473,41 +470,6 @@ func extractLfBonusesFromDoc(doc *goquery.Document) (ogame.LfBonuses, error) {
 		}
 	}
 	return *b, nil
-}
-
-func extractLfBonusesV13(doc *goquery.Document, b *ogame.LfBonuses) bool {
-	ships := doc.Find(`bonus-item-content[data-toggable-target="ships"]`).First()
-	costReduction := doc.Find(`bonus-item-content[data-toggable-target="costreduction"]`).First()
-	expedition := doc.Find(`bonus-item-content[data-toggable-target="expedition"]`).First()
-	characterClasses := doc.Find(`bonus-item-content[data-toggable-target="characterclasses"]`).First()
-	if ships.Length() == 0 && costReduction.Length() == 0 && expedition.Length() == 0 && characterClasses.Length() == 0 {
-		return false
-	}
-
-	for _, heading := range directLfBonusHeadings(ships).EachIter() {
-		extractShipStatBonus(heading, b, heading.AttrOr("data-toggable", ""))
-	}
-	for _, heading := range directLfBonusHeadings(costReduction).EachIter() {
-		id := heading.AttrOr("data-toggable", "")
-		extractCostReductionBonus(heading, b, id)
-		extractTimeReductionBonus(heading, b, id)
-	}
-	for _, heading := range directLfBonusHeadings(expedition).EachIter() {
-		if heading.AttrOr("data-toggable", "") == "ResultBooster" {
-			b.LfResourceBonuses.ResourcesExpedition = extractBonusFromStringPercentage(heading.Find("div.subCategoryBonus").First().Text())
-		}
-	}
-	for _, heading := range directLfBonusHeadings(characterClasses).EachIter() {
-		if heading.AttrOr("data-toggable", "") == "603" {
-			match := regexp.MustCompile(`[-+]?\d+(?:[.,]\d+)?`).FindString(heading.Find("div.subCategoryBonus").First().Text())
-			b.CharacterClassesBonuses.Characterclasses3 = extractBonusFromStringPercentage(match)
-		}
-	}
-	return true
-}
-
-func directLfBonusHeadings(section *goquery.Selection) *goquery.Selection {
-	return section.ChildrenFiltered("bonus-item-content-holder").ChildrenFiltered("inner-bonus-item-heading[data-toggable]")
 }
 
 func extractCategories(g *goquery.Selection, category string) (string, string) {
