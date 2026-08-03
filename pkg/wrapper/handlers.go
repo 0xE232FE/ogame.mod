@@ -1651,7 +1651,7 @@ func GetCaptchaSolverHandler(c echo.Context) error {
 			bot.error(err)
 		}
 	}
-	return c.Redirect(http.StatusTemporaryRedirect, "/")
+	return c.JSON(http.StatusOK, SuccessResp(nil))
 }
 
 // CaptchaChallenge ...

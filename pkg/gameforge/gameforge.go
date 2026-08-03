@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -91,6 +92,21 @@ func (e CaptchaRequiredError) Error() string {
 	return fmt.Sprintf("captcha required, %s", e.ChallengeID)
 }
 
+// PowRequiredError returned when the login requires solving a proof-of-work challenge.
+type PowRequiredError struct {
+	PowFile *PowFile
+}
+
+// NewPowRequiredError ...
+func NewPowRequiredError(pf *PowFile) *PowRequiredError {
+	return &PowRequiredError{PowFile: pf}
+}
+
+// Error ...
+func (e *PowRequiredError) Error() string {
+	return fmt.Sprintf("pow required, %d challenge(s)", len(e.PowFile.Pow.Challenges))
+}
+
 // RegisterError ...
 type RegisterError struct{ ErrorString string }
 
@@ -142,6 +158,7 @@ type LoginParams struct {
 	Password    string
 	OtpSecret   string
 	ChallengeID string
+	PowNonces   string
 }
 
 type loginParams struct {
@@ -188,6 +205,7 @@ type Gameforge struct {
 	solver            CaptchaSolver
 	maxCaptchaRetries int
 	bearerToken       string
+	powNonces         string
 }
 
 // Config ...
@@ -237,6 +255,7 @@ func (g *Gameforge) Login(params *LoginParams) (out *LoginResponse, err error) {
 		if params.ChallengeID == "" || challengeID != "" {
 			params.ChallengeID = challengeID
 		}
+		params.PowNonces = g.powNonces
 		res, err := login(&loginParams{LoginParams: params, Ctx: g.ctx, Device: g.device, platform: g.platform, lobby: g.lobby})
 		if err != nil {
 			return err
@@ -349,6 +368,20 @@ RETRY:
 		if err := solveCaptcha(ctx, device, challengeID, solver); err != nil {
 			return err
 		}
+		goto RETRY
+	}
+	var powErr *PowRequiredError
+	if errors.As(err, &powErr) {
+		if maxTry <= 0 {
+			return err
+		}
+		maxTry--
+		solutions := solvePowChallenge(powErr.PowFile)
+		nonces := make([]string, len(solutions))
+		for i, n := range solutions {
+			nonces[i] = strconv.FormatInt(n, 10)
+		}
+		g.powNonces = strings.Join(nonces, ",")
 		goto RETRY
 	}
 	return err
@@ -644,6 +677,20 @@ func login(params *loginParams) (out *LoginResponse, err error) {
 		}
 	}
 
+	// OGame v13 proof-of-work gate: the login response (or a header) can carry
+	// a hashcash challenge set that must be solved before login proceeds.
+	if pf, perr := ParsePowFile(by); perr == nil {
+		return out, NewPowRequiredError(pf)
+	}
+	if powURL := extractPowURL(resp); powURL != "" {
+		powBy, ferr := fetchURL(ctx, client, powURL)
+		if ferr == nil {
+			if pf, perr := ParsePowFile(powBy); perr == nil {
+				return out, NewPowRequiredError(pf)
+			}
+		}
+	}
+
 	if resp.StatusCode == http.StatusForbidden {
 		if string(by) == `{"error":{"message":"Forbidden"}}` {
 			return out, ErrForbidden
@@ -658,13 +705,48 @@ func login(params *loginParams) (out *LoginResponse, err error) {
 		if string(by) == `{"reason":"OTP_INVALID"}` {
 			return out, ErrOTPInvalid
 		}
-		return out, ErrBadCredentials
+		return out, fmt.Errorf("login failed (status %d): %s | headers: %v", resp.StatusCode, string(by), resp.Header)
 	}
 
 	if err := json.Unmarshal(by, &out); err != nil {
 		return out, err
 	}
 	return out, nil
+}
+
+// extractPowURL looks for a proof-of-work challenge URL in the response headers.
+func extractPowURL(resp *http.Response) string {
+	for _, h := range []string{"Gf-Pow", "Gf-Challenge-Id", "Location"} {
+		if v := resp.Header.Get(h); v != "" && strings.Contains(v, ".pow") {
+			return v
+		}
+	}
+	return ""
+}
+
+func fetchURL(ctx context.Context, client HttpClient, u string) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set(acceptEncodingHeaderKey, gzipEncoding)
+	req = req.WithContext(ctx)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+
+// solvePowChallenge solves all proof-of-work challenges and returns the nonces.
+func solvePowChallenge(pf *PowFile) []int64 {
+	workers := 8
+	solutions := make([]int64, len(pf.Pow.Challenges))
+	for i, c := range pf.Pow.Challenges {
+		solutions[i] = SolvePowParallel(c.Salt, c.Target, workers)
+	}
+	return solutions
 }
 
 // Logout ...
@@ -768,6 +850,10 @@ func postSessionsReq(params *loginParams, gameEnvironmentID, platformGameID stri
 
 	if challengeID != "" {
 		req.Header.Set(ChallengeIDCookieName, challengeID)
+	}
+
+	if params.PowNonces != "" {
+		req.Header.Set("X-Pow-Solution", params.PowNonces)
 	}
 
 	if otpSecret != "" {
