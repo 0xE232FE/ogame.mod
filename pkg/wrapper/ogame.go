@@ -1629,6 +1629,20 @@ func (b *OGame) cancelFleet(fleetID ogame.FleetID) error {
 	if err != nil {
 		return err
 	}
+	if recallAction := page.GetDoc().Find("div#fleet"+utils.FI64(fleetID)+" a.icon_link").AttrOr("data-recall-action", ""); recallAction != "" {
+		// v13: recall via action=recallFleet&fleetId=&asJson=1
+		if _, err = b.getPageContent(url.Values{
+			"page":      {"ingame"},
+			"component": {"movement"},
+			"action":    {"recallFleet"},
+			"fleetId":   {fleetID.String()},
+			"asJson":    {"1"},
+			"token":     {token},
+		}); err != nil {
+			return err
+		}
+		return nil
+	}
 	if _, err = b.getPageContent(url.Values{"page": {"ingame"}, "component": {"movement"}, "return": {fleetID.String()}, "token": {token}}); err != nil {
 		return err
 	}
@@ -2486,58 +2500,130 @@ func calcResources(price int64, planetResources ogame.PlanetResources, multiplie
 
 func (b *OGame) traderImportExportTrade(price int64, importToken string, planetResources ogame.PlanetResources, multiplier ogame.Multiplier) (string, error) {
 	payload := calcResources(price, planetResources, multiplier)
-	payload.Add("action", "trade")
 	payload.Add("bid[honor]", "0")
 	payload.Add("token", importToken)
-	payload.Add("ajax", "1")
-	pageHTML1, err := b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderimportexport"}, "ajax": {"1"}, "action": {"trade"}, "asJson": {"1"}}, payload)
+	var pageHTML1 []byte
+	var err error
+	if isOgameV13(b) {
+		payload.Add("action", "importExportTrade")
+		pageHTML1, err = b.postPageContent(url.Values{"page": {"ingame"}, "component": {"trader"}, "asJson": {"1"}}, payload)
+	} else {
+		payload.Add("action", "trade")
+		payload.Add("ajax", "1")
+		pageHTML1, err = b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderimportexport"}, "ajax": {"1"}, "action": {"trade"}, "asJson": {"1"}}, payload)
+	}
 	if err != nil {
 		return "", err
 	}
-	// {"message":"You have bought a container.","error":false,"item":{"uuid":"40f6c78e11be01ad3389b7dccd6ab8efa9347f3c","itemText":"You have purchased 1 KRAKEN Bronze.","bargainText":"The contents of the container not appeal to you? For 500 Dark Matter you can exchange the container for another random container of the same quality. You can only carry out this exchange 2 times per daily offer.","bargainCost":500,"bargainCostText":"Costs: 500 Dark Matter","tooltip":"KRAKEN Bronze|Reduces the building time of buildings currently under construction by <b>30m<\/b>.<br \/><br \/>\nDuration: now<br \/><br \/>\nPrice: --- <br \/>\nIn Inventory: 1","image":"98629d11293c9f2703592ed0314d99f320f45845","amount":1,"rarity":"common"},"newToken":"07eefc14105db0f30cb331a8b7af0bfe"}
+	// v12: {"message":"You have bought a container.","error":false,"item":{...},"newToken":"..."}
+	// v13: {"message":"...","success":true,"item":{...},"newAjaxToken":"..."} or {"message":"...","success":false,"errors":[{"message":"..."}]}
 	var result struct {
 		Message      string
-		Error        bool
+		Error        json.RawMessage
+		Errors       []struct {
+			Message string
+		}
 		NewAjaxToken string
 	}
 	if err := json.Unmarshal(pageHTML1, &result); err != nil {
 		return "", err
 	}
-	if result.Error {
+	if len(result.Error) > 0 && string(result.Error) != "false" && string(result.Error) != "null" {
 		return "", errors.New(result.Message)
+	}
+	if len(result.Errors) > 0 {
+		return "", errors.New(result.Errors[0].Message)
 	}
 	return result.NewAjaxToken, nil
 }
 
 func (b *OGame) traderImportExportTakeItem(token string) error {
-	payload := url.Values{"action": {"takeItem"}, "token": {token}, "ajax": {"1"}}
-	pageHTML, err := b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderimportexport"}, "ajax": {"1"}, "action": {"takeItem"}, "asJson": {"1"}}, payload)
+	var pageHTML []byte
+	var err error
+	if isOgameV13(b) {
+		pageHTML, err = b.postPageContent(
+			url.Values{"page": {"ingame"}, "component": {"trader"}, "asJson": {"1"}},
+			url.Values{"action": {"importExportTakeItem"}, "token": {token}},
+		)
+	} else {
+		pageHTML, err = b.postPageContent(
+			url.Values{"page": {"ajax"}, "component": {"traderimportexport"}, "ajax": {"1"}, "action": {"takeItem"}, "asJson": {"1"}},
+			url.Values{"action": {"takeItem"}, "token": {token}, "ajax": {"1"}},
+		)
+	}
 	if err != nil {
 		return err
 	}
 	var result struct {
 		Message      string
-		Error        bool
+		Error        json.RawMessage
+		Errors       []struct {
+			Message string
+		}
 		NewAjaxToken string
 	}
 	if err := json.Unmarshal(pageHTML, &result); err != nil {
 		return err
 	}
-	if result.Error {
+	if len(result.Error) > 0 && string(result.Error) != "false" && string(result.Error) != "null" {
 		return errors.New(result.Message)
 	}
-	// {"error":false,"message":"You have accepted the offer and put the item in your inventory.","item":{"name":"Bronze Deuterium Booster","image":"f0e514af79d0808e334e9b6b695bf864b861bdfa","imageLarge":"c7c2837a0b341d37383d6a9d8f8986f500db7bf9","title":"Bronze Deuterium Booster|+10% more Deuterium Synthesizer harvest on one planet<br \/><br \/>\nDuration: 1w<br \/><br \/>\nPrice: --- <br \/>\nIn Inventory: 134","effect":"+10% more Deuterium Synthesizer harvest on one planet","ref":"d9fa5f359e80ff4f4c97545d07c66dbadab1d1be","rarity":"common","amount":134,"amount_free":134,"amount_bought":0,"category":["d8d49c315fa620d9c7f1f19963970dea59a0e3be","e71139e15ee5b6f472e2c68a97aa4bae9c80e9da"],"currency":"dm","costs":"2500","isReduced":false,"buyable":false,"canBeActivated":true,"canBeBoughtAndActivated":false,"isAnUpgrade":false,"isCharacterClassItem":false,"hasEnoughCurrency":true,"cooldown":0,"duration":604800,"durationExtension":null,"totalTime":null,"timeLeft":null,"status":null,"extendable":false,"firstStatus":"effecting","toolTip":"Bronze Deuterium Booster|+10% more Deuterium Synthesizer harvest on one planet&lt;br \/&gt;&lt;br \/&gt;\nDuration: 1w&lt;br \/&gt;&lt;br \/&gt;\nPrice: --- &lt;br \/&gt;\nIn Inventory: 134","buyTitle":"This item is currently unavailable for purchase.","activationTitle":"Activate","moonOnlyItem":false,"newOffer":false,"noOfferMessage":"There are no further offers today. Please come again tomorrow."},"newToken":"dec779714b893be9b39c0bedf5738450","components":[],"newAjaxToken":"e20cf0a6ca0e9b43a81ccb8fe7e7e2e3"}
+	if len(result.Errors) > 0 {
+		return errors.New(result.Errors[0].Message)
+	}
+	// v12: {"error":false,"message":"You have accepted the offer and put the item in your inventory.","item":{...},"newToken":"..."}
+	// v13: {"message":"...","success":true,"item":{...},"newAjaxToken":"..."}
 	return nil
 }
 
 func (b *OGame) buyOfferOfTheDay() error {
-	pageHTML, err := b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderimportexport"}}, url.Values{"show": {"importexport"}, "ajax": {"1"}})
-	if err != nil {
-		return err
+	var pageHTML []byte
+	var err error
+	v13ImportToken := ""
+	if isOgameV13(b) {
+		// Load the trader page to grab the csrf token used to fetch the import/export view.
+		traderPage, err := b.getPageContent(url.Values{"page": {"ingame"}, "component": {"trader"}})
+		if err != nil {
+			return err
+		}
+		tokenMatch := regexp.MustCompile(`var token\s?=\s?"([^"]+)"`).FindStringSubmatch(string(traderPage))
+		if len(tokenMatch) != 2 {
+			tokenMatch = regexp.MustCompile(`token\s?=\s?"([^"]+)"`).FindStringSubmatch(string(traderPage))
+		}
+		if len(tokenMatch) != 2 {
+			return errors.New("failed to extract trader token")
+		}
+		pageHTML, err = b.postPageContent(
+			url.Values{"page": {"ingame"}, "component": {"trader"}, "action": {"importexport"}, "ajax": {"1"}},
+			url.Values{"action": {"importexport"}, "token": {tokenMatch[1]}, "ajax": {"1"}},
+		)
+		if err != nil {
+			return err
+		}
+		// v13 wraps the import/export page in a JSON envelope: {"content":{"trader":"<html>"},"newAjaxToken":"..."}
+		var importExportResp struct {
+			Content struct {
+				Trader string `json:"trader"`
+			} `json:"content"`
+			NewAjaxToken string `json:"newAjaxToken"`
+		}
+		if err = json.Unmarshal(pageHTML, &importExportResp); err != nil {
+			return err
+		}
+		pageHTML = []byte(importExportResp.Content.Trader)
+		v13ImportToken = importExportResp.NewAjaxToken
+	} else {
+		pageHTML, err = b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderimportexport"}}, url.Values{"show": {"importexport"}, "ajax": {"1"}})
+		if err != nil {
+			return err
+		}
 	}
 	price, importToken, planetResources, multiplier, err := b.extractor.ExtractOfferOfTheDay(pageHTML)
 	if err != nil {
 		return err
+	}
+	if isOgameV13(b) && v13ImportToken != "" {
+		importToken = v13ImportToken
 	}
 	newAjaxToken, err := b.traderImportExportTrade(price, importToken, planetResources, multiplier)
 	if err != nil {
@@ -2564,14 +2650,38 @@ func fixAttackEvents(attacks []ogame.AttackEvent, planets []Planet) {
 }
 
 func (b *OGame) getAttacks(opts ...Option) (out []ogame.AttackEvent, err error) {
-	vals := url.Values{"page": {"componentOnly"}, "component": {EventListAjaxPageName}, "ajax": {"1"}}
-	page, err := getAjaxPage[parser.EventListAjaxPage](b, vals, opts...)
-	if err != nil {
-		return
+	var pageHTML []byte
+	if isOgameV13(b) {
+		// v13 loads the event list via a JSON endpoint and wraps the html in content.eventlist
+		var by []byte
+		if by, err = b.getPageContent(url.Values{"page": {"ingame"}, "component": {"eventlist"}, "action": {"catchEvents"}, "ajax": {"1"}}); err != nil {
+			return
+		}
+		var eventResp struct {
+			Content struct {
+				Eventlist string `json:"eventlist"`
+			} `json:"content"`
+		}
+		if err = json.Unmarshal(by, &eventResp); err != nil {
+			return
+		}
+		pageHTML = []byte(eventResp.Content.Eventlist)
+	} else {
+		vals := url.Values{"page": {"componentOnly"}, "component": {EventListAjaxPageName}, "ajax": {"1"}}
+		var page parser.EventListAjaxPage
+		page, err = getAjaxPage[parser.EventListAjaxPage](b, vals, opts...)
+		if err != nil {
+			return
+		}
+		pageHTML = page.GetContent()
 	}
 	planets := b.getCachedPlanets()
 	ownCoords := getOwnCoordinates(planets)
-	out, err = page.ExtractAttacks(ownCoords)
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(pageHTML))
+	if err != nil {
+		return
+	}
+	out, err = b.extractor.ExtractAttacksFromDoc(doc, ownCoords)
 	if err != nil {
 		return
 	}
@@ -2603,6 +2713,9 @@ func (b *OGame) galaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemI
 		"system": {utils.FI64(system)},
 	}
 	vals := url.Values{"page": {"ingame"}, "component": {"galaxy"}, "action": {"fetchGalaxyContent"}, "ajax": {"1"}, "asJson": {"1"}}
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil && isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+		vals = url.Values{"page": {"ingame"}, "component": {"galaxy"}, "action": {"fetchSolarSystemData"}, "asJson": {"1"}}
+	}
 	pageHTML, err := b.postPageContent(vals, payload, opts...)
 	if err != nil {
 		return res, err
@@ -2622,6 +2735,26 @@ func (b *OGame) galaxyInfos(galaxy, system int64, opts ...Option) (ogame.SystemI
 }
 
 func (b *OGame) getGalaxyPage(galaxy int64, system int64, opts ...Option) (*GalaxyPageContent, error) {
+	if ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); err == nil && isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+		by, err := b.postPageContent(url.Values{
+			"page":      {"ingame"},
+			"component": {"galaxy"},
+			"action":    {"fetchSolarSystemData"},
+			"asJson":    {"1"},
+		}, url.Values{
+			"galaxy": {strconv.Itoa(int(galaxy))},
+			"system": {strconv.Itoa(int(system))},
+		}, opts...)
+		if err != nil {
+			return nil, err
+		}
+		var res GalaxyPageContent
+		if err = json.Unmarshal(by, &res); err != nil {
+			return nil, err
+		}
+		return &res, nil
+	}
+
 	// Get galaxy page content for the desired system.
 	by, err := b.postPageContent(url.Values{
 		"page":      {"ingame"},
@@ -3280,6 +3413,7 @@ type CheckTargetResponse struct {
 	} `json:"targetPlanet"`
 	Errors          []OGameError `json:"errors"`
 	TargetOk        bool         `json:"targetOk"`
+	Message         string       `json:"message"`
 	Components      []any        `json:"components"`
 	EmptySystems    int64        `json:"emptySystems"`
 	InactiveSystems int64        `json:"inactiveSystems"`
@@ -3427,9 +3561,13 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 		return zeroFleet, err
 	}
 
-	if !checkRes.TargetOk {
-		if len(checkRes.Errors) > 0 {
-			return zeroFleet, errors.New(checkRes.Errors[0].Message + " (" + strconv.Itoa(checkRes.Errors[0].Error) + ")")
+	targetAccepted := checkRes.TargetOk || (checkRes.Status == "success" && strings.EqualFold(strings.TrimSpace(checkRes.Message), "ok"))
+	if !targetAccepted {
+		if len(checkRes.Errors) > 0 && strings.TrimSpace(checkRes.Errors[0].Message) != "" {
+			return zeroFleet, fmt.Errorf("%s (%d)", checkRes.Errors[0].Message, checkRes.Errors[0].Error)
+		}
+		if message := strings.TrimSpace(checkRes.Message); message != "" && !strings.EqualFold(message, "ok") {
+			return zeroFleet, errors.New(message)
 		}
 		return zeroFleet, errors.New("target is not ok")
 	}
