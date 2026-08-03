@@ -360,11 +360,22 @@ RETRY:
 	}
 	var captchaErr *CaptchaRequiredError
 	if errors.As(err, &captchaErr) {
+		challengeID = captchaErr.ChallengeID
+		// A proof-of-work captcha can be solved in-process (no external solver needed).
+		if isPow, perr := isPowCaptchaChallenge(ctx, device, challengeID); perr == nil && isPow {
+			if maxTry <= 0 {
+				return err
+			}
+			maxTry--
+			if err := SolvePowCaptcha(ctx, device, challengeID); err != nil {
+				return err
+			}
+			goto RETRY
+		}
 		if maxTry <= 0 || solver == nil {
 			return err
 		}
 		maxTry--
-		challengeID = captchaErr.ChallengeID
 		if err := solveCaptcha(ctx, device, challengeID, solver); err != nil {
 			return err
 		}

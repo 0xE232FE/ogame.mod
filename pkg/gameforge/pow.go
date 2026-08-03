@@ -25,6 +25,7 @@ type PowFile struct {
 		Algorithm  string         `json:"algorithm"`
 		Challenges []PowChallenge `json:"challenges"`
 	} `json:"pow"`
+	Instrumentation string `json:"instrumentation"`
 }
 
 // SolvePow finds the minimal nonce such that the sha256 digest of salt+dec(nonce)
