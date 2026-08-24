@@ -2669,6 +2669,20 @@ func (b *OGame) setResourceSettings(planetID ogame.PlanetID, settings ogame.Reso
 		"last217":      {utils.FI64(settings.Crawler)},
 	}
 	url2 := b.cache.serverURL + "/game/index.php?page=resourceSettings"
+	if ogVersion, verr := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version)); verr == nil && isVGreaterThanOrEqual(ogVersion, "13.0.0") {
+		payload = url.Values{
+			"token":                 {token},
+			"productionFactor[1]":   {utils.FI64(settings.MetalMine)},
+			"productionFactor[2]":   {utils.FI64(settings.CrystalMine)},
+			"productionFactor[3]":   {utils.FI64(settings.DeuteriumSynthesizer)},
+			"productionFactor[4]":   {utils.FI64(settings.SolarPlant)},
+			"productionFactor[12]":  {utils.FI64(settings.FusionReactor)},
+			"productionFactor[212]": {utils.FI64(settings.SolarSatellite)},
+			"productionFactor[217]": {utils.FI64(settings.Crawler)},
+		}
+		_, err = b.postPageContent(url.Values{"page": {"ingame"}, "component": {ResourceSettingsPageName}, "asJson": {"1"}}, payload, ChangePlanet(planetID.Celestial()))
+		return err
+	}
 	resp, err := b.device.GetClient().PostForm(url2, payload)
 	if err != nil {
 		return err
