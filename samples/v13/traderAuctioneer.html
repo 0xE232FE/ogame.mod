@@ -1,0 +1,722 @@
+<div id="div_auctioneer" class="div_trader" style="display:none;">
+    <div class="header">
+        <h2>Commissaire-priseur</h2>
+    </div>
+    <div class="content">
+        <p class="stimulus">
+            <a title="Règles|Entre 6 et 23 heures, le commissaire-priseur organise des ventes aux enchères à intervalles réguliers. Les enchères sont faites en ressources ou en points honorifiques.&lt;br /&gt;
+&lt;br /&gt;
+&lt;span style=&quot;font-weight: bold;&quot;&gt;Cependant, les ressources et points honorifiques enchéris ne seront jamais restitués.&lt;/span&gt;&lt;br /&gt;
+&lt;br /&gt;
+Votre mise sera dans tous les cas perdue, que vous remportiez la vente ou pas. Si quelqu&amp;#96;un fait une enchère supérieure à la vôtre, vous pourrez renchérir. Par exemple : si un joueur fait une enchère de 1 000 ressources et qu&amp;#96;un autre joueur surenchéri avec 3 000 ressources, le premier joueur pourra surenchérir à son tour avec 4 000 ressources. Ce n&amp;#96;est qu&amp;#96;une fois la vente terminée que l&amp;#96;ancienne enchère sera effacée.&lt;br /&gt;
+&lt;br /&gt;
+Attention : dans vos enchères, le cristal et le deutérium ont une valeur respectivement 1.5 et 3 fois supérieure à celle du métal.&lt;br /&gt;
+&lt;br /&gt;
+Plus le niveau de qualité de l&amp;#96;objet est élevé (bronze, argent, or), plus l&amp;#96;objet sera rarement mis en vente."
+               href="javascript:void(0);"
+               class="tooltipHTML help rules"></a>
+            <span style="width:90%;">
+                Chaque jour, des objets vous seront proposés sur lesquels vous pourrez enchérir avec des ressources.<br/>
+                Si quelqu&#96;un a fait une meilleure offre, vous pouvez surenchérir. <span style="font-weight: bold;"><span style="color: #99CC00">Les ressources investies et les points honorifiques ne seront cependant pas restitués.</span></span>
+            </span>
+        </p>
+        <div class="left_box">
+            <div class="left_header">
+                <h2>Vente terminée</h2>
+            </div>
+            <div class="left_content">
+                <div class="overlay"></div>
+                                    <div class="image_140px">
+                        <img alt="DETROID en bronze" src="/cdn/img/item-images/56724c3a1dcae8036bb172f0be833a6f9a28bc27.png"
+                             height="136" width="136"
+                             style="margin: 2px;"/>
+                        <a class="detail_button tooltipHTML js_hideTipOnMobile slideIn r_common_140px" href="javascript:void(0);"
+                           title="DETROID en bronze|Le temps de construction des ordres actuels dans le chantier spatial sur une planète diminue de &lt;span style=&quot;font-weight: bold;&quot;&gt;30m&lt;/span&gt;.&lt;br /&gt;
+&lt;br /&gt;
+Durée : maintenant&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                           ref="d3d541ecc23e4daa0c698e44c32f04afd2037d84">
+                                <span class="ecke">
+                                    <span class="level amount">0</span>
+                                </span>
+                        </a>
+                    </div>
+                    <p class="auction_info">Prochaine vente aux enchères dans :<br />
+<span class="nextAuction" id="nextAuction">12082</span></p>
+                    <label class="auction_detail odd info_label">Enchère actuelle: </label>
+                    <div class="detail_value odd currentSum">6.002</div>
+
+                    <label class="auction_detail even info_label">Nombre d`enchères: </label>
+                    <div class="detail_value even numberOfBids">6</div>
+
+                    <label class="auction_detail odd info_label">Le plus offrant: </label>
+                                            <a data-player-id="100021" href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=2&amp;system=174" class="detail_value odd currentPlayer">
+                            proutman
+                        </a>
+                                                </div>
+            <div class="left_footer"></div>
+        </div> <!--  left_box End -->
+
+        <div class="right_box">
+            <div class="noAuctionOverlay" style=""></div>
+            <div class="right_header">
+                <h2>Faire une enchère</h2>
+            </div>
+
+            <div class="right_content">
+                <div class="resourceSelection">
+    <div class="selectWrapper">
+        <a href="javascript:void(0);" alt="Choisissez des ressources de vos planètes"
+           class="tooltip js_hideTipOnMobile source planet js_planet selected"
+           title="Choisissez des ressources de vos planètes"></a>
+        <a href="javascript:void(0);" alt="Choisissez des ressources de vos lunes"
+           class="tooltip js_hideTipOnMobile source moon js_moon "
+           title="Choisissez des ressources de vos lunes"></a>
+        <a href="javascript:void(0);" alt="Échangez vos points honorifiques"
+           class="tooltip js_hideTipOnMobile source honor js_honor"
+           title="Échangez vos points honorifiques"></a>
+
+        <a id="js_toggleLinkauctioneer" href="#togglePanel" class="js_valSourcePlanet toggleHidden toggleLink">
+            <img alt="mother land" src="https://gf1.geo.gfsrv.net/cdn05/0122370171dce5625755e122f533d2.png" width="18" height="18" >
+            <span class="option_source">mother land</span>
+        </a>
+    </div>
+    <table class="table_ressources" cellspacing="0" cellpadding="0">
+        <tr class="normalResource">
+            <td><div class="resourceIcon metal resource_label"></div></td>
+            <td class="multiplier undermark tooltip" title="Chaque unité Métal a une valeur de 1.">
+                <span class="dark_highlight_tablet">x 1</span>
+            </td>
+            <td><input type="text" pattern="[0-9,.]*" class="resourceAmount js_amount js_sliderMetalInput js_metal checkThousandSeparator hideNumberSpin" name="" value="0"/></td>
+            <td><a class="value-control more js_sliderMetalMore js_valButton tooltip js_hideTipOnMobile" title="Enchérir +1000 ressources">+</a></td>
+            <td><a class="value-control max js_sliderMetalMax js_valButton tooltipRight js_hideTipOnMobile" title="Enchérir autant que nécessaire/possible">>></a></td>
+        </tr>
+        <tr class="normalResource">
+            <td colspan="2">&nbsp;</td>
+            <td><div class="max_hint">(max. <span class="max_planet_res max_planet_metal">1.755,947</span>)</div></td>
+            <td colspan="2">&nbsp;</td>
+        </tr>
+        <tr class="normalResource">
+            <td><div class="resourceIcon crystal resource_label"></div></td>
+            <td class="multiplier undermark tooltip" title="Chaque unité Cristal a une valeur de 1.5.">
+                <span class="dark_highlight_tablet">x 1.5</span>
+            </td>
+            <td><input type="text" pattern="[0-9,.]*" class="resourceAmount js_amount js_sliderCrystalInput js_crystal checkThousandSeparator hideNumberSpin" name="" value="0"/></td>
+            <td><a class="value-control more js_sliderCrystalMore js_valButton tooltip js_hideTipOnMobile" title="Enchérir +1000 ressources">+</a></td>
+            <td><a class="value-control max js_sliderCrystalMax js_valButton tooltipRight js_hideTipOnMobile" title="Enchérir autant que nécessaire/possible">>></a></td>
+        </tr>
+        <tr class="normalResource">
+            <td colspan="2">&nbsp;</td>
+            <td><div class="max_hint">(max. <span class="max_planet_res max_planet_crystal">492,162</span>)</div></td>
+            <td colspan="2">&nbsp;</td>
+        </tr>
+        <tr class="normalResource">
+            <td><div class="resourceIcon deuterium resource_label"></div></td>
+            <td class="multiplier undermark tooltip" title="Chaque unité Deutérium a une valeur de 3.">
+                <span class="dark_highlight_tablet">x 3</span>
+            </td>
+            <td><input type="text" pattern="[0-9,.]*" class="resourceAmount js_amount js_sliderDeuteriumInput js_deuterium checkThousandSeparator hideNumberSpin" name="" value="0"/></td>
+            <td><a class="value-control more js_sliderDeuteriumMore js_valButton tooltip js_hideTipOnMobile" title="Enchérir +1000 ressources">+</a></td>
+            <td><a class="value-control max js_sliderDeuteriumMax js_valButton tooltipRight js_hideTipOnMobile" title="Enchérir autant que nécessaire/possible">>></a></td>
+        </tr>
+        <tr class="normalResource">
+            <td colspan="2">&nbsp;</td>
+            <td><div class="max_hint">(max. <span class="max_planet_res max_planet_deuterium">556,333</span>)</div></td>
+            <td colspan="2">&nbsp;</td>
+        </tr>
+        <tr class="honorResource" style="display: none">
+            <td><img src="/cdn/img/trader/honorPointsLarge.png" alt="Points honorifiques" class="resource_label" /></td>
+            <td class="multiplier undermark tooltip" title="Chaque unité Points honorifiques a une valeur de 100.">
+                <span class="dark_highlight_tablet">x 100</span>
+            </td>
+            <td><input type="text" pattern="[0-9,.]*"  class="resourceAmount js_amount js_sliderHonorInput js_honor checkThousandSeparator hideNumberSpin" name="" value="0"/></td>
+            <td><a class="value-control more js_sliderHonorMore js_valButton tooltip js_hideTipOnMobile" title="Enchérissez +1000 points honorifiques">+</a></td>
+            <td><a class="value-control max js_sliderHonorMax js_valButton tooltipRight js_hideTipOnMobile" title="Enchérir autant que nécessaire/possible">>></a></td>
+        </tr>
+        <tr class="honorResource" style="display: none">
+            <td colspan="2">&nbsp;</td>
+            <td><div class="max_hint">(max. <span class="max_planet_res max_planet_honor">0</span>)</div></td>
+            <td colspan="2">&nbsp;</td>
+        </tr>
+    </table>
+    <div id="js_togglePanelauctioneer" class="togglePanel" style="display: none;">
+        <ul class="planet 
+    active"
+        
+>
+                        <li id="33625288"
+                class="dark_highlight_tablet selected"
+                data-planetId="33625288">
+                <img alt="mother land" src="https://gf1.geo.gfsrv.net/cdn05/0122370171dce5625755e122f533d2.png" width="18"
+                     height="18"/>
+                <span class="option_source">mother land [1:445:6]</span>
+            </li>
+            </ul>
+        <ul class="moon
+    "
+        style="display:none"
+>
+                </ul>
+    </div>
+</div>
+
+                <table class="table_ressources_sum" cellspacing="0" cellpadding="0">
+                    <tr class="even">
+                        <td class="auctionInfo js_bidRise tooltip" title="La quantité de ressources que vous ajoutez à votre dernière enchère.">Enchère augmentée de:</td>
+                        <td class="auctionInfo sum js_auctioneerSum green_text tooltip" title="La quantité de ressources que vous ajoutez à votre dernière enchère.">0</td>
+                    </tr>
+                    <tr class="odd">
+                        <td width="40%" class="auctionInfo tooltip" title="La quantité de ressources que vous enchérissez pour la vente en cours.">Votre enchère:</td>
+                        <td width="60%" class="auctionInfo js_alreadyBidden">0</td>
+                    </tr>
+                    <tr class="odd">
+                        <td class="auctionInfo tooltip" title="La quantité de ressources minimale que vous devez enchérir.">Enchère minimum:</td>
+                        <td class="auctionInfo js_price">0</td>
+                    </tr>
+                    <tr class="even">
+                        <td class="auctionInfo tooltip" title="La quantité de ressources qui manquent encore pour atteindre l`enchère minimum.">Déficit:</td>
+                        <td class="auctionInfo js_deficit">0</td>
+                    </tr>
+                </table>
+
+                <p class="overbid_text">Quelqu`un a surenchéri votre offre !</p>
+                <a href="javascript:void(0);" class="pay disabled">Faire une enchère</a>
+                <br class="clearfloat" />
+            </div>
+            <div class="right_footer"></div>
+        </div> <!-- right_box End -->
+        <br class="clearfloat" />
+        <div class="auction_history">
+            <div class="history_header">
+                <h2>Dernières enchères</h2>
+            </div>
+            <div class="history_content">
+                <ul>
+                                                                                                                <li class="even ">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="422db99aac4ec594d483d8ef7faadc5d40d6f7d3">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/6e1d20e739c143784d10e58ddb4c50c52122a40a.png"
+                                     alt="" title="Booster de cristal en argent|&amp;#43;20% de production dans les mines de cristal d&amp;#96;une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : 7.500 Antimatière (AM)&lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_uncommon"/>
+                            </a>
+
+                            <span class="detail sum">19.011</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=5">
+                                    Melo
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">22:30:57</span>
+                        </li>
+                                                                                            <li class="odd ">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="3c9f85221807b8d593fa5276cdf7af9913c4a35d">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/ddedd2f4128678c7c857af7e5550e397f50f38c2.png"
+                                     alt="" title="Booster de cristal en bronze|&amp;#43;10% de production dans les mines de cristal d&amp;#96;une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">60.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=1">
+                                    Zozo
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">21:33:30</span>
+                        </li>
+                                                                                            <li class="even ">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="de922af379061263a56d7204d1c395cefcfb7d75">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/7f833a0709db862070ca9cdca8e91c28e52432af.png"
+                                     alt="" title="Booster de métal en bronze|&amp;#43;10% de production dans les mines de métal d&amp;#96;une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">22.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=207">
+                                    Chief Rigel
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">20:36:09</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="d3d541ecc23e4daa0c698e44c32f04afd2037d84">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/56724c3a1dcae8036bb172f0be833a6f9a28bc27.png"
+                                     alt="" title="DETROID en bronze|Le temps de construction des ordres actuels dans le chantier spatial sur une planète diminue de &lt;span style=&quot;font-weight: bold;&quot;&gt;30m&lt;/span&gt;.&lt;br /&gt;
+&lt;br /&gt;
+Durée : maintenant&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">250.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=4&amp;system=234">
+                                    Chancellor Voyager
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">19:44:52</span>
+                        </li>
+                                                                                            <li class="even more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="e4b78acddfa6fd0234bcb814b676271898b0dbb3">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/7d3064415ec1a60100db024471fb0c1fa8ab3726.png"
+                                     alt="" title="Booster de deutérium en argent|&amp;#43;20% de production par synthétiseur de deutérium sur une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : 7.500 Antimatière (AM)&lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_uncommon"/>
+                            </a>
+
+                            <span class="detail sum">3.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=109">
+                                    Constable Atlas
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">18:43:31</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="8a4f9e8309e1078f7f5ced47d558d30ae15b4a1b">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/d949732b01a7f7f6d92e814f2de99479a324e1e3.png"
+                                     alt="" title="NEWTRON en or|Diminue le temps des recherches en cours de &lt;span style=&quot;font-weight: bold;&quot;&gt;6h&lt;/span&gt;.&lt;br /&gt;
+&lt;br /&gt;
+Durée : maintenant&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_rare"/>
+                            </a>
+
+                            <span class="detail sum">400.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=4">
+                                    Magicarpe
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">17:35:42</span>
+                        </li>
+                                                                                            <li class="even more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="40f6c78e11be01ad3389b7dccd6ab8efa9347f3c">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/98629d11293c9f2703592ed0314d99f320f45845.png"
+                                     alt="" title="KRAKEN en bronze|Le temps de construction des bâtiments en train d&amp;#96;être érigés sur une planète diminue de &lt;span style=&quot;font-weight: bold;&quot;&gt;30m&lt;/span&gt;.&lt;br /&gt;
+&lt;br /&gt;
+Durée : maintenant&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">2.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=133">
+                                    Restless Galaxy
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">16:32:04</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="3f6f381dc9b92822406731a942c028adf8dc978f">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/daba686ad7f01a5d1e8b28bd13a1a9d1b8efe19c.png"
+                                     alt="" title="Boosteurs d`énergie en bronze|&amp;#43;20 % de production d&amp;#96;énergie en plus sur une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">29.016</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=5">
+                                    Melo
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">15:39:44</span>
+                        </li>
+                                                                                            <li class="even more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="3f6f381dc9b92822406731a942c028adf8dc978f">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/daba686ad7f01a5d1e8b28bd13a1a9d1b8efe19c.png"
+                                     alt="" title="Boosteurs d`énergie en bronze|&amp;#43;20 % de production d&amp;#96;énergie en plus sur une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">71.517</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=2&amp;system=174">
+                                    proutman
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">14:35:42</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="40f6c78e11be01ad3389b7dccd6ab8efa9347f3c">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/98629d11293c9f2703592ed0314d99f320f45845.png"
+                                     alt="" title="KRAKEN en bronze|Le temps de construction des bâtiments en train d&amp;#96;être érigés sur une planète diminue de &lt;span style=&quot;font-weight: bold;&quot;&gt;30m&lt;/span&gt;.&lt;br /&gt;
+&lt;br /&gt;
+Durée : maintenant&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">8.001</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=2&amp;system=174">
+                                    proutman
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">13:39:55</span>
+                        </li>
+                                                                                            <li class="even more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="e4b78acddfa6fd0234bcb814b676271898b0dbb3">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/7d3064415ec1a60100db024471fb0c1fa8ab3726.png"
+                                     alt="" title="Booster de deutérium en argent|&amp;#43;20% de production par synthétiseur de deutérium sur une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : 7.500 Antimatière (AM)&lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_uncommon"/>
+                            </a>
+
+                            <span class="detail sum">109.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=2&amp;system=174">
+                                    proutman
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">12:44:18</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="e4b78acddfa6fd0234bcb814b676271898b0dbb3">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/7d3064415ec1a60100db024471fb0c1fa8ab3726.png"
+                                     alt="" title="Booster de deutérium en argent|&amp;#43;20% de production par synthétiseur de deutérium sur une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : 7.500 Antimatière (AM)&lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_uncommon"/>
+                            </a>
+
+                            <span class="detail sum">16.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=2&amp;system=174">
+                                    proutman
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">11:43:48</span>
+                        </li>
+                                                                                            <li class="even more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="ba85cc2b8a5d986bbfba6954e2164ef71af95d4a">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/db8f26a29991086cadd9db7deff044d89cd47dea.png"
+                                     alt="" title="Booster de métal en argent|&amp;#43;20% de production dans les mines de métal d&amp;#96;une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : 7.500 Antimatière (AM)&lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_uncommon"/>
+                            </a>
+
+                            <span class="detail sum">100.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=6">
+                                    AfterZath
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">10:37:25</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="a83cfdc15b8dba27c82962d57e50d8101d263cfb">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/34752e40512a574a74464006d326bd6aebecb1f1.png"
+                                     alt="" title="Boosteur de métal en platine|&amp;#43;40% de production dans les mines de métal d&amp;#96;une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : 30.000 Antimatière (AM)&lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_epic"/>
+                            </a>
+
+                            <span class="detail sum">1.500.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=6">
+                                    AfterZath
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">09:38:08</span>
+                        </li>
+                                                                                            <li class="even more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="da4a2a1bb9afd410be07bc9736d87f1c8059e66d">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/4bc4327a3fd508b5da84267e2cfd58d47f9e4dcb.png"
+                                     alt="" title="NEWTRON en bronze|Diminue le temps des recherches en cours de &lt;span style=&quot;font-weight: bold;&quot;&gt;30m&lt;/span&gt;.&lt;br /&gt;
+&lt;br /&gt;
+Durée : maintenant&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">38.683</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=2&amp;system=174">
+                                    proutman
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">08:41:58</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="d9fa5f359e80ff4f4c97545d07c66dbadab1d1be">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/c7c2837a0b341d37383d6a9d8f8986f500db7bf9.png"
+                                     alt="" title="Booster de deutérium en bronze|&amp;#43;10% de production par synthétiseur de deutérium sur une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">25.010</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=70">
+                                    Sovereign Void
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">07:43:03</span>
+                        </li>
+                                                                                            <li class="even more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="3c9f85221807b8d593fa5276cdf7af9913c4a35d">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/ddedd2f4128678c7c857af7e5550e397f50f38c2.png"
+                                     alt="" title="Booster de cristal en bronze|&amp;#43;10% de production dans les mines de cristal d&amp;#96;une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">23.251</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=153">
+                                    Bouiboui
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">06:34:47</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="0968999df2fe956aa4a07aea74921f860af7d97f">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/55d4b1750985e4843023d7d0acd2b9bafb15f0b7.png"
+                                     alt="" title="DETROID en or|Le temps de construction des ordres actuels dans le chantier spatial sur une planète diminue de &lt;span style=&quot;font-weight: bold;&quot;&gt;6h&lt;/span&gt;.&lt;br /&gt;
+&lt;br /&gt;
+Durée : maintenant&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_rare"/>
+                            </a>
+
+                            <span class="detail sum">500.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=12">
+                                    Darth Vader
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">23:38:03</span>
+                        </li>
+                                                                                            <li class="even more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="27cbcd52f16693023cb966e5026d8a1efbbfc0f9">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/d0b8fb3d307b815b3182f3872e8eab654fe677df.png"
+                                     alt="" title="DETROID en argent|Le temps de construction des ordres actuels dans le chantier spatial sur une planète diminue de &lt;span style=&quot;font-weight: bold;&quot;&gt;2h&lt;/span&gt;.&lt;br /&gt;
+&lt;br /&gt;
+Durée : maintenant&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_uncommon"/>
+                            </a>
+
+                            <span class="detail sum">3.988.027</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=5">
+                                    Melo
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">22:37:49</span>
+                        </li>
+                                                                                            <li class="odd more_auctions_li">
+                            <a href="javascript:void(0);"
+                               class="slideIn"
+                               ref="3c9f85221807b8d593fa5276cdf7af9913c4a35d">
+                                <img height="30" width="30"
+                                     src="/cdn/img/item-images/ddedd2f4128678c7c857af7e5550e397f50f38c2.png"
+                                     alt="" title="Booster de cristal en bronze|&amp;#43;10% de production dans les mines de cristal d&amp;#96;une planète&lt;br /&gt;
+&lt;br /&gt;
+Durée : 1s&lt;br /&gt;
+&lt;br /&gt;
+Prix : --- &lt;br /&gt;
+Dans l&amp;#96;inventaire : 0"
+                                     class="item_img tooltipHTML tooltipLeft r_common"/>
+                            </a>
+
+                            <span class="detail sum">52.000</span>
+
+                                                                                                                            <span class="detail player">
+                                <a href="https://s283-fr.ogame.gameforge.com/game/index.php?page=ingame&amp;component=galaxy&amp;galaxy=1&amp;system=25">
+                                    Bartyz
+                                </a>
+                            </span>
+                            
+                            <span class="detail date_time">21:44:11</span>
+                        </li>
+                                    </ul>
+                <a href="javascript:void(0);" class="more dark_highlight_tablet" style="">
+                    [Plus]
+                </a>
+                <br class="clearfloat" />
+            </div>
+            <div class="history_footer"></div>
+        </div>
+
+
+    </div>  <!-- content End -->
+    <div class="footer"></div>
+</div><!--  Trader auctioneer End -->
+<script type="text/javascript">
+    var playerBid = null;
+    var auctionFinished = true;
+    var AuctionIdOflastPlayerBid = 0;
+
+    var auctionId = "603";
+    
+    var multiplier = {"metal":1,"crystal":1.5,"deuterium":3,"honor":100};
+    var planetResources = {"33625288":{"input":{"metal":1755,"crystal":492,"deuterium":556},"output":{"metal":0,"crystal":0,"deuterium":0},"isMoon":false,"imageFileName":"https:\/\/gf1.geo.gfsrv.net\/cdn05\/0122370171dce5625755e122f533d2.png","name":"mother land","otherPlanetId":null}};
+
+    auctioneer.initialize();
+    initThousandSeparator();
+</script>

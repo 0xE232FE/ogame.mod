@@ -140,12 +140,11 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 		return ogame.Auction{}, errors.New("failed to json parse auction multiplier: " + err.Error())
 	}
 
-	// Find auctioneer token
+	// Find auctioneer token. OGame 13 moved it to the parent trader page / newAjaxToken JSON field.
 	tokenRegex := regexp.MustCompile(`token\s?=\s?"([^"]+)";`).FindStringSubmatch(doc.Text())
-	if len(tokenRegex) != 2 {
-		return ogame.Auction{}, errors.New("failed to find auctioneer token")
+	if len(tokenRegex) == 2 {
+		auction.Token = tokenRegex[1]
 	}
-	auction.Token = tokenRegex[1]
 
 	// Find Planet / Moon resources JSON
 	planetMoonResources := regexp.MustCompile(`planetResources\s?=\s?([^;]+);`).FindStringSubmatch(doc.Text())
@@ -162,8 +161,9 @@ func extractAuctionFromDoc(doc *goquery.Document) (ogame.Auction, error) {
 		return ogame.Auction{}, errors.New("failed to get playerBid")
 	}
 	var alreadyBid int64
-	if m[1] != "false" {
-		alreadyBid = utils.DoParseI64(m[1])
+	bidStr := strings.TrimSpace(m[1])
+	if bidStr != "false" && bidStr != "null" && bidStr != "undefined" {
+		alreadyBid = utils.DoParseI64(bidStr)
 	}
 	auction.AlreadyBid = alreadyBid
 

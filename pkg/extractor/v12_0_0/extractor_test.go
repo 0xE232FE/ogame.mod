@@ -40,6 +40,19 @@ func TestExtractGalaxyInfos_alliance(t *testing.T) {
 	assert.Equal(t, int64(110), infos.Position(9).Alliance.Member)
 }
 
+func TestExtractAuctionV13Finished(t *testing.T) {
+	pageHTMLBytes, _ := os.ReadFile("../../../samples/v13/traderAuctioneer.html")
+	auction, err := NewExtractor().ExtractAuction(pageHTMLBytes)
+	assert.Nil(t, err)
+	assert.True(t, auction.HasFinished)
+	assert.Equal(t, int64(12082), auction.Endtime)
+	assert.Equal(t, "proutman", auction.HighestBidder)
+	assert.Equal(t, int64(100021), auction.HighestBidderUserID)
+	assert.Equal(t, int64(6), auction.NumBids)
+	assert.Equal(t, "detroid en bronze", auction.CurrentItem)
+	assert.Equal(t, "d3d541ecc23e4daa0c698e44c32f04afd2037d84", auction.Ref)
+}
+
 func TestExtractChapter(t *testing.T) {
 	pageHTMLBytes, _ := os.ReadFile("../../../samples/v12.0.43/en/directives_chapter.html")
 	chapter, _ := NewExtractor().ExtractChapter(pageHTMLBytes)
