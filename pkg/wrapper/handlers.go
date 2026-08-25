@@ -1478,7 +1478,7 @@ func GetAuctionHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
 	auction, err := bot.GetAuction()
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ErrorResp(400, "could not open auction page"))
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "could not open auction page: "+err.Error()))
 	}
 	return c.JSON(http.StatusOK, SuccessResp(auction))
 }

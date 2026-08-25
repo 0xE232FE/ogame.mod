@@ -2366,13 +2366,105 @@ func (b *OGame) activateItem(ref string, celestialID ogame.CelestialID) error {
 	return nil
 }
 
-func (b *OGame) getAuction(celestialID ogame.CelestialID) (ogame.Auction, error) {
-	payload := url.Values{"show": {"auctioneer"}, "ajax": {"1"}}
-	auctionHTML, err := b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderauctioneer"}}, payload, ChangePlanet(celestialID))
-	if err != nil {
-		return ogame.Auction{}, err
+var traderAjaxTokenRe = regexp.MustCompile(`(?m)^\s*token\s*=\s*"([^"]+)"`)
+
+func extractTraderAjaxToken(pageHTML []byte) string {
+	m := traderAjaxTokenRe.FindSubmatch(pageHTML)
+	if len(m) == 2 {
+		return string(m[1])
 	}
-	return b.extractor.ExtractAuction(auctionHTML)
+	return ""
+}
+
+func parseTraderAjax(raw []byte) (html []byte, newToken string) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 {
+		return raw, ""
+	}
+	if trimmed[0] == '"' {
+		var s string
+		if err := json.Unmarshal(trimmed, &s); err == nil {
+			trimmed = bytes.TrimSpace([]byte(s))
+		}
+	}
+	if len(trimmed) == 0 || trimmed[0] != '{' {
+		return trimmed, ""
+	}
+	var wrap struct {
+		Content struct {
+			Trader string `json:"trader"`
+		} `json:"content"`
+		NewAjaxToken string `json:"newAjaxToken"`
+	}
+	if err := json.Unmarshal(trimmed, &wrap); err != nil {
+		return trimmed, ""
+	}
+	if wrap.Content.Trader != "" {
+		return []byte(wrap.Content.Trader), wrap.NewAjaxToken
+	}
+	return trimmed, wrap.NewAjaxToken
+}
+
+func unwrapTraderJSON(raw []byte) []byte {
+	html, _ := parseTraderAjax(raw)
+	return html
+}
+
+func (b *OGame) isOGameV13() bool {
+	ogVersion, err := version.NewVersion(sanitizeServerVersion(b.cache.serverData.Version))
+	return err == nil && isVGreaterThanOrEqual(ogVersion, "13.0.0")
+}
+
+func (b *OGame) tryExtractAuction(src string, html []byte, fetchErr error) (ogame.Auction, error) {
+	if fetchErr != nil {
+		return ogame.Auction{}, fmt.Errorf("%s fetch: %w", src, fetchErr)
+	}
+	html, jsonToken := parseTraderAjax(html)
+	auction, err := b.extractor.ExtractAuction(html)
+	if err != nil {
+		prefix := string(html)
+		if len(prefix) > 180 {
+			prefix = prefix[:180]
+		}
+		prefix = strings.ReplaceAll(prefix, "\n", " ")
+		return ogame.Auction{}, fmt.Errorf("%s extract: %w (len=%d prefix=%q)", src, err, len(html), prefix)
+	}
+	if auction.Token == "" && jsonToken != "" {
+		auction.Token = jsonToken
+	}
+	return auction, nil
+}
+
+func (b *OGame) getAuction(celestialID ogame.CelestialID) (ogame.Auction, error) {
+	opts := []Option{ChangePlanet(celestialID), SkipRetry}
+	if b.isOGameV13() {
+		return b.getAuctionV13(opts)
+	}
+	payload := url.Values{"show": {"auctioneer"}, "ajax": {"1"}}
+	auctionHTML, err := b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderauctioneer"}}, payload, opts...)
+	return b.tryExtractAuction("post-ajax-traderauctioneer", auctionHTML, err)
+}
+
+func (b *OGame) getAuctionV13(opts []Option) (ogame.Auction, error) {
+	traderHTML, err := b.getPageContent(url.Values{"page": {"ingame"}, "component": {"trader"}}, opts...)
+	if err != nil {
+		return ogame.Auction{}, fmt.Errorf("could not open trader page: %w", err)
+	}
+	payload := url.Values{"action": {"auctioneer"}, "ajax": {"1"}}
+	pageToken := extractTraderAjaxToken(traderHTML)
+	if pageToken != "" {
+		payload.Set("token", pageToken)
+	}
+
+	html, fetchErr := b.postPageContent(url.Values{"page": {"ingame"}, "component": {"trader"}, "action": {"auctioneer"}, "ajax": {"1"}}, payload, opts...)
+	auction, extractErr := b.tryExtractAuction("post-trader-action-auctioneer", html, fetchErr)
+	if extractErr != nil {
+		return ogame.Auction{}, extractErr
+	}
+	if auction.Token == "" {
+		auction.Token = pageToken
+	}
+	return auction, nil
 }
 
 func (b *OGame) doAuction(celestialID ogame.CelestialID, bid map[ogame.CelestialID]ogame.Resources) error {
@@ -2400,46 +2492,48 @@ func (b *OGame) doAuction(celestialID ogame.CelestialID, bid map[ogame.Celestial
 
 	payload.Add("bid[honor]", "0")
 	payload.Add("token", auction.Token)
-	payload.Add("ajax", "1")
 
 	if celestialID != 0 {
 		payload.Set("cp", utils.FI64(celestialID))
 	}
 
-	auctionHTML, err := b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderauctioneer"}, "ajax": {"1"}, "action": {"submitBid"}, "asJson": {"1"}}, payload)
+	var auctionHTML []byte
+	if b.isOGameV13() {
+		payload.Set("action", "auctioneerSubmitBid")
+		auctionHTML, err = b.postPageContent(url.Values{"page": {"ingame"}, "component": {"trader"}, "asJson": {"1"}}, payload)
+	} else {
+		payload.Add("ajax", "1")
+		auctionHTML, err = b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderauctioneer"}, "ajax": {"1"}, "action": {"submitBid"}, "asJson": {"1"}}, payload)
+	}
 	if err != nil {
 		return err
 	}
-
-	/*
-		Example return from postPageContent on page:auctioneer :
-		{
-		  "error": false,
-		  "message": "Your bid has been accepted.",
-		  "planetResources": {
-		    "$planetID": {
-		      "metal": $metal,
-		      "crystal": $crystal,
-		      "deuterium": $deuterium
-		    },
-		    "31434289": {
-		      "metal": 5202955.0986408,
-		      "crystal": 2043854.5003197,
-		      "deuterium": 1552571.3257004
-		    }
-		    <...>
-		  },
-		  "honor": 10107,
-		  "newToken": "940387sf93e28fbf47b24920c510db38"
-		}
-	*/
 
 	var jsonObj map[string]any
 	if err := json.Unmarshal(auctionHTML, &jsonObj); err != nil {
 		return err
 	}
+	if success, ok := jsonObj["success"].(bool); ok {
+		if success {
+			return nil
+		}
+		if errs, ok := jsonObj["errors"].([]any); ok && len(errs) > 0 {
+			if em, ok := errs[0].(map[string]any); ok {
+				if msg, ok := em["message"].(string); ok && msg != "" {
+					return errors.New(msg)
+				}
+			}
+		}
+		if msg, ok := jsonObj["message"].(string); ok && msg != "" {
+			return errors.New(msg)
+		}
+		return errors.New("auction bid failed")
+	}
 	if jsonObj["error"] == true {
-		return errors.New(jsonObj["message"].(string))
+		if msg, ok := jsonObj["message"].(string); ok && msg != "" {
+			return errors.New(msg)
+		}
+		return errors.New("auction bid failed")
 	}
 	return nil
 }
