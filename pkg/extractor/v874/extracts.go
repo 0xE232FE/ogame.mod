@@ -46,12 +46,11 @@ func extractOfferOfTheDayFromDoc(doc *goquery.Document) (price int64, importToke
 	}
 	price = utils.ParseInt(s.Text())
 	script := doc.Find("script").Text()
+	// OGame 13 moved the CSRF token to the parent trader page / newAjaxToken JSON field.
 	m := regexp.MustCompile(`var token\s?=\s?"([^"]*)";`).FindSubmatch([]byte(script))
-	if len(m) != 2 {
-		err = errors.New("failed to extract offer of the day import token")
-		return
+	if len(m) == 2 {
+		importToken = string(m[1])
 	}
-	importToken = string(m[1])
 	m = regexp.MustCompile(`var planetResources\s?=\s?({[^;]*});`).FindSubmatch([]byte(script))
 	if len(m) != 2 {
 		err = errors.New("failed to extract offer of the day raw planet resources")
