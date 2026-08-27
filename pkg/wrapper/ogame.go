@@ -2670,22 +2670,6 @@ func (b *OGame) traderImportExportTrade(price int64, importToken string, planetR
 		return "", err
 	}
 
-	// #region agent log
-	if f, oerr := os.OpenFile(`C:\Users\Administrator\browser-game-bot\debug-afded2.log`, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); oerr == nil {
-		prefix := string(pageHTML1)
-		if len(prefix) > 300 {
-			prefix = prefix[:300]
-		}
-		line, _ := json.Marshal(map[string]any{
-			"sessionId": "afded2", "runId": "post-fix", "hypothesisId": "H6b",
-			"location": "ogame.go:traderImportExportTrade", "message": "trade raw response",
-			"data": map[string]any{"len": len(pageHTML1), "prefix": prefix}, "timestamp": time.Now().UnixMilli(),
-		})
-		_, _ = f.Write(append(line, '\n'))
-		_ = f.Close()
-	}
-	// #endregion
-
 	ok, message, newToken, err := parseTraderActionJSON(pageHTML1)
 	if err != nil {
 		return "", err
@@ -2722,35 +2706,6 @@ func (b *OGame) traderImportExportTakeItem(token string) error {
 }
 
 func (b *OGame) buyOfferOfTheDay() error {
-	// #region agent log
-	agentDebugLog := func(hypothesisId, location, message string, data map[string]any) {
-		f, err := os.OpenFile(`C:\Users\Administrator\browser-game-bot\debug-afded2.log`, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return
-		}
-		defer f.Close()
-		payload := map[string]any{
-			"sessionId":    "afded2",
-			"runId":        "post-fix",
-			"hypothesisId": hypothesisId,
-			"location":     location,
-			"message":      message,
-			"data":         data,
-			"timestamp":    time.Now().UnixMilli(),
-		}
-		if line, err := json.Marshal(payload); err == nil {
-			_, _ = f.Write(append(line, '\n'))
-		}
-	}
-	prefixOf := func(b []byte) string {
-		s := string(b)
-		if len(s) > 160 {
-			s = s[:160]
-		}
-		return strings.ReplaceAll(s, "\n", " ")
-	}
-	// #endregion
-
 	var pageHTML []byte
 	var pageToken string
 	var err error
@@ -2774,24 +2729,8 @@ func (b *OGame) buyOfferOfTheDay() error {
 		if pageToken == "" {
 			pageToken = jsonTok
 		}
-		// #region agent log
-		agentDebugLog("H3", "ogame.go:buyOfferOfTheDay", "v13 importexport fetch", map[string]any{
-			"rawLen":       len(raw),
-			"unwrappedLen": len(pageHTML),
-			"hasToken":     pageToken != "",
-			"hasJsPrice":   bytes.Contains(pageHTML, []byte("js_import_price")),
-			"prefix":       prefixOf(pageHTML),
-		})
-		// #endregion
 	} else {
 		pageHTML, err = b.postPageContent(url.Values{"page": {"ajax"}, "component": {"traderimportexport"}}, url.Values{"show": {"importexport"}, "ajax": {"1"}})
-		// #region agent log
-		agentDebugLog("H1", "ogame.go:buyOfferOfTheDay", "legacy importexport fetch", map[string]any{
-			"fetchErr": err != nil,
-			"len":      len(pageHTML),
-			"prefix":   prefixOf(pageHTML),
-		})
-		// #endregion
 		if err != nil {
 			return err
 		}
@@ -2801,16 +2740,6 @@ func (b *OGame) buyOfferOfTheDay() error {
 	if importToken == "" {
 		importToken = pageToken
 	}
-	// #region agent log
-	agentDebugLog("H4", "ogame.go:buyOfferOfTheDay", "extract offer result", map[string]any{
-		"ok":           err == nil,
-		"err":          fmt.Sprintf("%v", err),
-		"price":        price,
-		"hasToken":     importToken != "",
-		"planetCount":  len(planetResources),
-		"usedPageTok":  pageToken != "" && importToken == pageToken,
-	})
-	// #endregion
 	if err != nil {
 		return err
 	}
@@ -2819,24 +2748,10 @@ func (b *OGame) buyOfferOfTheDay() error {
 	}
 
 	newAjaxToken, err := b.traderImportExportTrade(price, importToken, planetResources, multiplier)
-	// #region agent log
-	agentDebugLog("H6", "ogame.go:buyOfferOfTheDay", "trade result", map[string]any{
-		"ok":       err == nil,
-		"err":      fmt.Sprintf("%v", err),
-		"hasToken": newAjaxToken != "",
-	})
-	// #endregion
 	if err != nil {
 		return err
 	}
-	takeErr := b.traderImportExportTakeItem(newAjaxToken)
-	// #region agent log
-	agentDebugLog("H7", "ogame.go:buyOfferOfTheDay", "take item result", map[string]any{
-		"ok":  takeErr == nil,
-		"err": fmt.Sprintf("%v", takeErr),
-	})
-	// #endregion
-	return takeErr
+	return b.traderImportExportTakeItem(newAjaxToken)
 }
 
 // Hack fix: When moon name is >12, the moon image disappear from the EventsBox
@@ -3588,6 +3503,7 @@ type CheckTargetResponse struct {
 	} `json:"targetPlanet"`
 	Errors          []OGameError `json:"errors"`
 	TargetOk        bool         `json:"targetOk"`
+	Success         bool         `json:"success"`
 	Components      []any        `json:"components"`
 	EmptySystems    int64        `json:"emptySystems"`
 	InactiveSystems int64        `json:"inactiveSystems"`
@@ -3735,7 +3651,7 @@ func (b *OGame) sendFleet(celestialID ogame.CelestialID, ships ogame.ShipsInfos,
 		return zeroFleet, err
 	}
 
-	if !checkRes.TargetOk {
+	if !checkRes.TargetOk && !checkRes.Success && checkRes.Status != "success" {
 		if len(checkRes.Errors) > 0 {
 			return zeroFleet, errors.New(checkRes.Errors[0].Message + " (" + strconv.Itoa(checkRes.Errors[0].Error) + ")")
 		}

@@ -157,6 +157,46 @@ func main() {
 			Value:   "device_name",
 			Sources: cli.EnvVars("OGAMED_DEVICENAME"),
 		},
+		&cli.StringFlag{
+			Name:  "device-system",
+			Usage: "Device OS name (accepted for TBot compatibility)",
+		},
+		&cli.StringFlag{
+			Name:  "device-browser",
+			Usage: "Device browser name (accepted for TBot compatibility)",
+		},
+		&cli.StringFlag{
+			Name:  "device-user-agent",
+			Usage: "Device user agent (accepted for TBot compatibility)",
+		},
+		&cli.IntFlag{
+			Name:  "device-memory",
+			Usage: "Device memory GB (accepted for TBot compatibility)",
+		},
+		&cli.IntFlag{
+			Name:  "device-concurrency",
+			Usage: "Device hardware concurrency (accepted for TBot compatibility)",
+		},
+		&cli.IntFlag{
+			Name:  "device-color",
+			Usage: "Device screen color depth (accepted for TBot compatibility)",
+		},
+		&cli.IntFlag{
+			Name:  "device-width",
+			Usage: "Device screen width (accepted for TBot compatibility)",
+		},
+		&cli.IntFlag{
+			Name:  "device-height",
+			Usage: "Device screen height (accepted for TBot compatibility)",
+		},
+		&cli.StringFlag{
+			Name:  "device-timezone",
+			Usage: "Device timezone (accepted for TBot compatibility)",
+		},
+		&cli.StringFlag{
+			Name:  "device-lang",
+			Usage: "Device languages (accepted for TBot compatibility)",
+		},
 	}
 	app.Action = start
 	if err := app.Run(context.Background(), os.Args); err != nil {
