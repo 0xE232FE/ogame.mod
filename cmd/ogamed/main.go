@@ -363,6 +363,7 @@ func start(ctx context.Context, c *cli.Command) error {
 	e.GET("/bot/planets/:planetID/resources-buildings", wrapper.GetResourcesBuildingsHandler)
 	e.GET("/bot/planets/:planetID/lifeform-buildings", wrapper.GetLfBuildingsHandler)
 	e.GET("/bot/planets/:planetID/lifeform-techs", wrapper.GetLfResearchHandler)
+	e.GET("/bot/lfbonuses", wrapper.GetLfBonusesHandler)
 	e.GET("/bot/planets/:planetID/defence", wrapper.GetDefenseHandler)
 	e.GET("/bot/planets/:planetID/ships", wrapper.GetShipsHandler)
 	e.GET("/bot/planets/:planetID/facilities", wrapper.GetFacilitiesHandler)

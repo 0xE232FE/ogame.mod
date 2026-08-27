@@ -609,6 +609,17 @@ func GetLfResearchHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(res))
 }
 
+// GetLfBonusesHandler returns empire lifeform bonuses.
+// curl 127.0.0.1:1234/bot/lfbonuses
+func GetLfBonusesHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	lfBonuses, err := bot.GetLfBonuses()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(lfBonuses))
+}
+
 // GetResourcesBuildingsHandler ...
 func GetResourcesBuildingsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
