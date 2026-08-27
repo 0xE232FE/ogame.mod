@@ -620,6 +620,84 @@ func GetLfBonusesHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, SuccessResp(lfBonuses))
 }
 
+// GetAllianceClassHandler returns the player's alliance class.
+// curl 127.0.0.1:1234/bot/alliance-class
+func GetAllianceClassHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	allianceClass, err := bot.GetCachedAllianceClass()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResp(500, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(allianceClass))
+}
+
+// GetAvailableDiscoveriesHandler returns remaining discovery fleet slots for a celestial.
+// curl 127.0.0.1:1234/bot/planets/:planetID/get-available-discoveries
+func GetAvailableDiscoveriesHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	planetID, err := utils.ParseI64(c.Param("planetID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
+	}
+	var opts []Option
+	if planetID != 0 {
+		opts = append(opts, ChangePlanet(ogame.CelestialID(planetID)))
+	}
+	count, err := bot.GetAvailableDiscoveries(opts...)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(count))
+}
+
+// GetPositionsAvailableForDiscoveryFleetHandler returns empty positions in a system for discovery.
+// curl 127.0.0.1:1234/bot/planets/:planetID/get-system-available-discovery -d 'galaxy=6&system=473'
+func GetPositionsAvailableForDiscoveryFleetHandler(c echo.Context) error {
+	bot := c.Get("bot").(*OGame)
+	planetID, err := utils.ParseI64(c.Param("planetID"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid planet id"))
+	}
+	var opts []Option
+	if planetID != 0 {
+		opts = append(opts, ChangePlanet(ogame.CelestialID(planetID)))
+	}
+
+	if err := c.Request().ParseForm(); err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid form"))
+	}
+
+	where := ogame.Coordinate{Type: ogame.PlanetType}
+	for key, values := range c.Request().PostForm {
+		switch key {
+		case "galaxy":
+			galaxy, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid galaxy"))
+			}
+			where.Galaxy = galaxy
+		case "system":
+			system, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid system"))
+			}
+			where.System = system
+		case "position":
+			position, err := utils.ParseI64(values[0])
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, ErrorResp(400, "invalid position"))
+			}
+			where.Position = position
+		}
+	}
+
+	coords, err := bot.GetPositionsAvailableForDiscoveryFleet(where.Galaxy, where.System, opts...)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ErrorResp(400, err.Error()))
+	}
+	return c.JSON(http.StatusOK, SuccessResp(coords))
+}
+
 // GetResourcesBuildingsHandler ...
 func GetResourcesBuildingsHandler(c echo.Context) error {
 	bot := c.Get("bot").(*OGame)
