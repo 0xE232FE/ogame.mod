@@ -39,7 +39,10 @@ type LfShipBonus struct {
 }
 
 type LfResourceBonuses struct {
-	ResourcesExpedition float64
+	ResourcesExpedition          float64
+	ResourcesMetalProduction     float64
+	ResourcesCrystalProduction   float64
+	ResourcesDeuteriumProduction float64
 }
 
 type CharacterClassesBonuses struct {
